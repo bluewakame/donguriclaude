@@ -7,9 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "db:migrate": "prisma migrate dev",
-    "db:seed": "ts-node prisma/seed.ts",
-    "db:generate": "prisma generate"
+    "db:migrate": "dotenv -e .env.local -- prisma migrate dev",
+    "db:seed": "dotenv -e .env.local -- ts-node prisma/seed.ts",
+    "db:generate": "dotenv -e .env.local -- prisma generate",
+    "db:studio": "dotenv -e .env.local -- prisma studio"
   },
   "dependencies": {
     "next": "14.2.5",
@@ -38,6 +39,7 @@
   "devDependencies": {
     "eslint": "^8",
     "eslint-config-next": "14.2.5",
-    "@types/node": "^20"
+    "@types/node": "^20",
+    "dotenv-cli": "^7.4.2"
   }
 }
