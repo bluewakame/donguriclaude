@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #4CAF82;
+  --primary-dark: #2E5F4A;
+  --primary-light: #7DD4A8;
+}
+
+body {
+  font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* どんぐりバウンスアニメーション */
+@keyframes acorn-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.acorn-bounce {
+  animation: acorn-bounce 1s ease-in-out infinite;
+}
+
+/* ゆでるボタンのグツグツアニメーション */
+@keyframes boil-bubble {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.boil-animate {
+  animation: boil-bubble 0.5s ease-in-out infinite;
+}

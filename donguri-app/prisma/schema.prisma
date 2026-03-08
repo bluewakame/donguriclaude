@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ユーザー
+model User {
+  id                  String    @id @default(uuid())
+  email               String    @unique
+  displayName         String
+  passwordHash        String?
+  acornBalance        Int       @default(0)
+  leafBalance         Int       @default(0)
+  goldenAcornBalance  Int       @default(0)
+  lastBoiledAt        DateTime?
+  createdAt           DateTime  @default(now())
+
+  visitLogs           VisitLog[]
+  tokenTransactions   TokenTransaction[]
+  acornExpiries       AcornExpiry[]
+  accounts            Account[]
+  sessions            Session[]
+}
+
+// NextAuth.js 用アカウント（Googleログイン等）
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+// NextAuth.js 用セッション
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// NextAuth.js 用検証トークン
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// 加盟店
+model Shop {
+  id             String    @id @default(uuid())
+  name           String
+  address        String
+  latitude       Float
+  longitude      Float
+  radiusMeters   Int       @default(50)
+  isPremium      Boolean   @default(false)
+  acornAmount    Int       @default(1)
+  goldenProbability Float  @default(0.1)
+  qrCodeToken    String    @unique
+  qrExpiresAt    DateTime
+  createdAt      DateTime  @default(now())
+
+  visitLogs      VisitLog[]
+}
+
+// 来店履歴
+model VisitLog {
+  id           String   @id @default(uuid())
+  userId       String
+  shopId       String
+  visitedAt    DateTime @default(now())
+  acornEarned  Int
+  isGolden     Boolean  @default(false)
+
+  user         User     @relation(fields: [userId], references: [id])
+  shop         Shop     @relation(fields: [shopId], references: [id])
+}
+
+// トークン取引履歴
+// type の値: "earn"(獲得) / "spend"(利用) / "expire"(消滅) / "boil"(ゆでた) / "exchange"(交換)
+// tokenType の値: "acorn"(どんぐり) / "leaf"(葉っぱ) / "golden_acorn"(金のどんぐり)
+model TokenTransaction {
+  id         String   @id @default(uuid())
+  userId     String
+  type       String
+  amount     Int
+  tokenType  String
+  note       String?
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id])
+}
+
+// どんぐりの有効期限管理
+model AcornExpiry {
+  id         String   @id @default(uuid())
+  userId     String
+  amount     Int
+  earnedAt   DateTime @default(now())
+  expiresAt  DateTime
+  isExpired  Boolean  @default(false)
+
+  user       User     @relation(fields: [userId], references: [id])
+}
