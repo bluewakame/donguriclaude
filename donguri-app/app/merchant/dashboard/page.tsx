@@ -1,6 +1,7 @@
 "use client";
 // 加盟店オーナー管理画面
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 
 interface Shop {
   id: string;
@@ -17,6 +18,7 @@ const STATUS_LABEL: Record<string, { label: string; className: string }> = {
 };
 
 export default function MerchantDashboard() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [latitude, setLatitude] = useState("");
@@ -233,13 +235,23 @@ export default function MerchantDashboard() {
                     </div>
                     <p className="text-sm text-gray-500 truncate">{shop.address}</p>
                   </div>
-                  <button
-                    onClick={() => handleDelete(shop.id, shop.name)}
-                    disabled={deletingId === shop.id}
-                    className="shrink-0 text-sm text-red-500 hover:text-red-700 border border-red-200 hover:border-red-400 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
-                  >
-                    {deletingId === shop.id ? "削除中..." : "削除"}
-                  </button>
+                  <div className="shrink-0 flex flex-col gap-1.5">
+                    {shop.status === "approved" && (
+                      <button
+                        onClick={() => router.push(`/merchant/shops/${shop.id}/qr`)}
+                        className="text-sm text-green-600 hover:text-green-800 border border-green-300 hover:border-green-500 px-3 py-1.5 rounded-lg transition-colors"
+                      >
+                        🌰 QRコード
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDelete(shop.id, shop.name)}
+                      disabled={deletingId === shop.id}
+                      className="text-sm text-red-500 hover:text-red-700 border border-red-200 hover:border-red-400 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {deletingId === shop.id ? "削除中..." : "削除"}
+                    </button>
+                  </div>
                 </li>
               );
             })}

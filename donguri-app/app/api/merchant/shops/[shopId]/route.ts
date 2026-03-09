@@ -1,8 +1,49 @@
-// DELETE: 自分が登録した店舗を削除
+// GET: 自分が登録した店舗の詳細取得 / DELETE: 自分が登録した店舗を削除
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: { shopId: string } }
+) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ ok: false, message: "ログインが必要です" }, { status: 401 });
+    }
+
+    const { shopId } = params;
+
+    const shop = await prisma.shop.findUnique({
+      where: { id: shopId },
+      select: {
+        id: true,
+        name: true,
+        address: true,
+        status: true,
+        qrCodeToken: true,
+        qrExpiresAt: true,
+        acornAmount: true,
+        createdBy: true,
+      },
+    });
+
+    if (!shop) {
+      return NextResponse.json({ ok: false, message: "店舗が見つかりません" }, { status: 404 });
+    }
+
+    if (shop.createdBy !== session.user.id) {
+      return NextResponse.json({ ok: false, message: "この店舗を表示する権限がありません" }, { status: 403 });
+    }
+
+    return NextResponse.json({ ok: true, data: shop });
+  } catch (error) {
+    console.error("店舗詳細取得エラー:", error);
+    return NextResponse.json({ ok: false, message: "サーバーエラーが発生しました" }, { status: 500 });
+  }
+}
 
 export async function DELETE(
   _request: NextRequest,
