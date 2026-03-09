@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 
 export default async function AdminDashboard() {
   const session = await auth();
@@ -11,11 +12,12 @@ export default async function AdminDashboard() {
   }
 
   // 統計情報を取得
-  const [userCount, shopCount, visitCount, totalAcorns] = await Promise.all([
+  const [userCount, shopCount, visitCount, totalAcorns, pendingShopCount] = await Promise.all([
     prisma.user.count(),
-    prisma.shop.count(),
+    prisma.shop.count({ where: { status: "approved" } }),
     prisma.visitLog.count(),
     prisma.user.aggregate({ _sum: { acornBalance: true } }),
+    prisma.shop.count({ where: { status: "pending" } }),
   ]);
 
   // 最近の来店ログ（10件）
@@ -54,6 +56,32 @@ export default async function AdminDashboard() {
           <p className="text-3xl font-bold text-amber-600">{totalAcorns._sum.acornBalance ?? 0}</p>
           <p className="text-sm text-gray-500">🌰 流通どんぐり</p>
         </div>
+      </div>
+
+      {/* 加盟店審査リンク */}
+      <div className="mb-6">
+        <Link
+          href="/admin/shops"
+          className="flex items-center justify-between bg-white rounded-xl border border-amber-200 p-4 hover:bg-amber-50 transition-colors"
+        >
+          <div>
+            <p className="font-bold text-gray-800">加盟店 審査管理</p>
+            <p className="text-sm text-gray-500">
+              {pendingShopCount > 0
+                ? `審査待ちの申請が ${pendingShopCount} 件あります`
+                : "審査待ちの申請はありません"}
+            </p>
+          </div>
+          <span className="text-2xl">
+            {pendingShopCount > 0 ? (
+              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-500 text-white text-sm font-bold">
+                {pendingShopCount}
+              </span>
+            ) : (
+              "→"
+            )}
+          </span>
+        </Link>
       </div>
 
       {/* 最近の来店ログ */}
