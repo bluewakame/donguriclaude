@@ -31,7 +31,7 @@ export default async function HomePage() {
           </div>
           {(user?.goldenAcornBalance ?? 0) > 0 && (
             <div className="text-center">
-              <div className="text-lg font-bold">{user.goldenAcornBalance}</div>
+              <div className="text-lg font-bold">{user?.goldenAcornBalance}</div>
               <div className="text-xs opacity-80">✨ 金</div>
             </div>
           )}
