@@ -16,7 +16,7 @@ export default async function MainLayout({
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-dvh overflow-hidden">
       {/* メインコンテンツ */}
       <main className="flex-1 overflow-y-auto pb-20">{children}</main>
 
