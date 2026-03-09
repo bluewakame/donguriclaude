@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import AcornWallet from "@/components/AcornWallet";
 import BoilButton from "@/components/BoilButton";
+import ForestView from "@/components/ForestView";
 import Link from "next/link";
 
 export default async function WalletPage() {
@@ -71,10 +72,32 @@ export default async function WalletPage() {
         </div>
       )}
 
-      {/* ゆでるボタン */}
+      {/* 森の可視化 */}
       <div className="mt-6">
+        <ForestView acornBalance={user?.acornBalance ?? 0} />
+      </div>
+
+      {/* ゆでるボタン */}
+      <div className="mt-4">
         <BoilButton currentBalance={user?.acornBalance ?? 0} />
       </div>
+
+      {/* 金のどんぐりショップリンク */}
+      {(user?.goldenAcornBalance ?? 0) > 0 && (
+        <Link
+          href="/shop"
+          className="mt-4 w-full flex items-center justify-between bg-yellow-50 border border-yellow-300 rounded-xl p-4 hover:bg-yellow-100 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">✨</span>
+            <div>
+              <p className="font-medium text-yellow-800">金のどんぐりショップ</p>
+              <p className="text-sm text-yellow-600">金のどんぐりでアイテムと交換</p>
+            </div>
+          </div>
+          <span className="text-gray-400">›</span>
+        </Link>
+      )}
 
       {/* 葉っぱ交換リンク */}
       <Link

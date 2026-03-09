@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Map from "@/components/Map";
+import Tutorial from "@/components/Tutorial";
 
 export default async function HomePage() {
   const session = await auth();
@@ -19,6 +20,8 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-col h-screen">
+      {/* チュートリアル（新規ユーザー向け） */}
+      <Tutorial />
       {/* ヘッダー */}
       <header className="bg-green-600 text-white px-4 py-3 flex items-center justify-between z-10">
         <div>
