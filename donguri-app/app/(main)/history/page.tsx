@@ -1,4 +1,5 @@
 // 取引・来店履歴ページ
+export const dynamic = 'force-dynamic';
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 

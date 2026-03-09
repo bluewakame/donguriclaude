@@ -1,4 +1,5 @@
 // 加盟店詳細ページ
+export const dynamic = 'force-dynamic';
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";

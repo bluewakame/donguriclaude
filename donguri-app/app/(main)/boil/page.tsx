@@ -1,4 +1,5 @@
 // どんぐりをゆでるページ
+export const dynamic = 'force-dynamic';
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import BoilButton from "@/components/BoilButton";

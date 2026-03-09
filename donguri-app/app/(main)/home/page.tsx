@@ -1,4 +1,5 @@
 // ホーム（マップ）ページ
+export const dynamic = 'force-dynamic';
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Map from "@/components/Map";

@@ -1,4 +1,5 @@
 // ウォレット（残高確認）ページ
+export const dynamic = 'force-dynamic';
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import AcornWallet from "@/components/AcornWallet";
