@@ -14,6 +14,7 @@ export default async function HomePage() {
     select: {
       displayName: true,
       acornBalance: true,
+      leafBalance: true,
       goldenAcornBalance: true,
     },
   });
@@ -33,6 +34,12 @@ export default async function HomePage() {
             <div className="text-lg font-bold">{user?.acornBalance ?? 0}</div>
             <div className="text-xs opacity-80">🌰 どんぐり</div>
           </div>
+          {(user?.leafBalance ?? 0) > 0 && (
+            <div className="text-center">
+              <div className="text-lg font-bold">{user?.leafBalance}</div>
+              <div className="text-xs opacity-80">🍃 葉っぱ</div>
+            </div>
+          )}
           {(user?.goldenAcornBalance ?? 0) > 0 && (
             <div className="text-center">
               <div className="text-lg font-bold">{user?.goldenAcornBalance}</div>
