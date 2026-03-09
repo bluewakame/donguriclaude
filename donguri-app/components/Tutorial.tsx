@@ -84,7 +84,7 @@ export default function Tutorial() {
   const isLast = step === TUTORIAL_STEPS.length - 1;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-[700] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden">
         {/* ヘッダー */}
         <div className="bg-green-600 px-6 pt-6 pb-4 text-white text-center">

@@ -158,7 +158,13 @@ export default function Map() {
         if (!hasInitialSpawnRef.current) {
           hasInitialSpawnRef.current = true;
           fetchNearbyShops(loc.lat, loc.lng);
-          spawnLeaves(loc.lat, loc.lng, INITIAL_LEAF_COUNT);
+          // sessionStorageでクールダウン管理（ページ再訪問のたびに葉っぱが沸くのを防ぐ）
+          const SPAWN_COOLDOWN_KEY = "donguri_leaf_spawn_time";
+          const lastSpawn = Number(sessionStorage.getItem(SPAWN_COOLDOWN_KEY) || 0);
+          if (Date.now() - lastSpawn > 3 * 60 * 1000) {
+            spawnLeaves(loc.lat, loc.lng, INITIAL_LEAF_COUNT);
+            sessionStorage.setItem(SPAWN_COOLDOWN_KEY, String(Date.now()));
+          }
           return;
         }
 
