@@ -1,13 +1,18 @@
 // 全体レイアウト
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "どんぐり - ポイ活アプリ",
   description: "提携店舗に来店してデジタルトークン「どんぐり」をためよう！",
   manifest: "/manifest.json",
+};
+
+export const viewport: Viewport = {
   themeColor: "#4CAF82",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({
