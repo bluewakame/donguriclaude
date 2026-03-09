@@ -66,6 +66,7 @@ model VerificationToken {
 }
 
 // 加盟店
+// status: "pending"(審査中) / "approved"(承認済み) / "rejected"(却下)
 model Shop {
   id             String    @id @default(uuid())
   name           String
@@ -78,6 +79,9 @@ model Shop {
   goldenProbability Float  @default(0.1)
   qrCodeToken    String    @unique
   qrExpiresAt    DateTime
+  status         String    @default("pending")
+  reviewedAt     DateTime?
+  reviewNote     String?
   createdAt      DateTime  @default(now())
 
   visitLogs      VisitLog[]

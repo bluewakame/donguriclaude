@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
         longitude,
         qrCodeToken,
         qrExpiresAt,
+        status: "pending",
       },
     });
 
