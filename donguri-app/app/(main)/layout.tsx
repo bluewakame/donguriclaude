@@ -16,12 +16,12 @@ export default async function MainLayout({
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col h-full">
       {/* メインコンテンツ */}
-      <main className="flex-1 pb-20">{children}</main>
+      <main className="flex-1 overflow-y-auto pb-20">{children}</main>
 
       {/* ボトムナビゲーション */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 pb-safe">
         <div className="max-w-lg mx-auto flex items-center justify-around py-2 px-4">
           <Link
             href="/home"
