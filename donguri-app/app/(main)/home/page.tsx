@@ -16,6 +16,7 @@ export default async function HomePage() {
       acornBalance: true,
       leafBalance: true,
       goldenAcornBalance: true,
+      tutorialDone: true,
     },
   });
 
@@ -26,7 +27,7 @@ export default async function HomePage() {
   return (
     <div className="flex flex-col h-full">
       {/* チュートリアル（新規ユーザー向け） */}
-      <Tutorial />
+      <Tutorial initialDone={user?.tutorialDone ?? false} />
 
       {/* ヘッダー */}
       <header className="bg-green-600 text-white px-4 py-3 flex items-center justify-between z-10 flex-none">

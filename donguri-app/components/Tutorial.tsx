@@ -1,6 +1,6 @@
 "use client";
 // チュートリアルモーダル（新規ユーザー向け7ステップガイド）
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 const TUTORIAL_STEPS = [
   {
@@ -47,19 +47,13 @@ const TUTORIAL_STEPS = [
   },
 ] as const;
 
-const STORAGE_KEY = "donguri_tutorial_done";
+interface TutorialProps {
+  initialDone: boolean;
+}
 
-export default function Tutorial() {
-  const [isOpen, setIsOpen] = useState(false);
+export default function Tutorial({ initialDone }: TutorialProps) {
+  const [isOpen, setIsOpen] = useState(!initialDone);
   const [step, setStep] = useState(0);
-
-  useEffect(() => {
-    // チュートリアル未完了のユーザーにのみ表示
-    const done = localStorage.getItem(STORAGE_KEY);
-    if (!done) {
-      setIsOpen(true);
-    }
-  }, []);
 
   const handleNext = () => {
     if (step < TUTORIAL_STEPS.length - 1) {
@@ -74,8 +68,9 @@ export default function Tutorial() {
   };
 
   const handleClose = () => {
-    localStorage.setItem(STORAGE_KEY, "1");
     setIsOpen(false);
+    // Supabase（DB）にチュートリアル完了を保存
+    fetch("/api/tutorial", { method: "POST" }).catch(() => {});
   };
 
   if (!isOpen) return null;
