@@ -21,7 +21,7 @@ export default async function MainLayout({
       <main className="flex-1 pb-20">{children}</main>
 
       {/* ボトムナビゲーション */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
         <div className="max-w-lg mx-auto flex items-center justify-around py-2 px-4">
           <Link
             href="/home"

@@ -18,9 +18,9 @@ export default async function HomePage() {
   });
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col" style={{ height: "100dvh" }}>
       {/* ヘッダー */}
-      <header className="bg-green-600 text-white px-4 py-3 flex items-center justify-between z-10">
+      <header className="bg-green-600 text-white px-4 py-3 flex items-center justify-between z-10 flex-shrink-0">
         <div>
           <p className="text-sm opacity-80">こんにちは、{user?.displayName ?? "ゲスト"}さん</p>
           <h1 className="text-xl font-bold">🌰 どんぐり</h1>

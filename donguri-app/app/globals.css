@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Leaflet地図CSS */
+@import 'leaflet/dist/leaflet.css';
+
 :root {
   --primary: #4CAF82;
   --primary-dark: #2E5F4A;
@@ -12,6 +15,26 @@ body {
   font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* モバイルでのスクロールを防止 */
+  overscroll-behavior: none;
+}
+
+/* モバイルタップのハイライトを除去 */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Leafletズームボタンのタッチターゲットを大きく */
+.leaflet-control-zoom a {
+  width: 36px !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  font-size: 18px !important;
+}
+
+/* セーフエリア対応（ノッチ付きスマホ） */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* どんぐりバウンスアニメーション */

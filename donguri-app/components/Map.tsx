@@ -1,6 +1,7 @@
 "use client";
-// Google Maps コンポーネント
+// Leaflet地図コンポーネント（OpenStreetMap使用）
 import { useEffect, useRef, useState } from "react";
+import type { Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
 
 interface Shop {
   id: string;
@@ -15,166 +16,184 @@ interface Shop {
 
 export default function Map() {
   const mapRef = useRef<HTMLDivElement>(null);
-  const [shops, setShops] = useState<Shop[]>([]);
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const mapInstanceRef = useRef<LeafletMap | null>(null);
+  const playerMarkerRef = useRef<LeafletMarker | null>(null);
   const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
-  const [mapLoaded, setMapLoaded] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
-  // ユーザーの現在地を取得
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          setUserLocation(location);
-          // 近くの店舗を取得
-          fetchNearbyShops(location.lat, location.lng);
-        },
-        () => {
-          // 位置情報が取得できない場合は東京駅をデフォルト
-          fetchNearbyShops(35.6812, 139.7671);
+    if (!mapRef.current || mapInstanceRef.current) return;
+
+    let watchId: number | null = null;
+
+    (async () => {
+      const L = (await import("leaflet")).default;
+      if (!mapRef.current) return;
+
+      const map = L.map(mapRef.current, {
+        center: [35.6895, 139.6917],
+        zoom: 15,
+        tap: true,
+      });
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "© OpenStreetMap contributors",
+      }).addTo(map);
+
+      // モバイルで地図サイズを正確に再計算
+      setTimeout(() => map.invalidateSize(), 300);
+
+      mapInstanceRef.current = map;
+
+      // 店舗マーカーを配置する関数
+      const placeShops = async (lat: number, lng: number) => {
+        try {
+          const res = await fetch(`/api/shops?latitude=${lat}&longitude=${lng}&radius=10000`);
+          const data = await res.json();
+          if (!data.ok) return;
+
+          const shopIcon = L.divIcon({
+            html: '<span style="font-size:36px;line-height:1;display:block">🌰</span>',
+            className: "",
+            iconSize: [36, 36],
+            iconAnchor: [18, 36],
+          });
+
+          (data.data as Shop[]).forEach((shop) => {
+            L.marker([shop.latitude, shop.longitude], { icon: shopIcon })
+              .addTo(map)
+              .on("click", () => setSelectedShop(shop));
+          });
+        } catch (e) {
+          console.error("店舗データ取得エラー:", e);
         }
-      );
-    }
+      };
+
+      // 位置情報取得
+      if (navigator.geolocation) {
+        let initialLocSet = false;
+
+        const playerIcon = L.divIcon({
+          html: '<span style="font-size:36px;line-height:1;display:block">🧍</span>',
+          className: "",
+          iconSize: [36, 44],
+          iconAnchor: [18, 44],
+        });
+
+        watchId = navigator.geolocation.watchPosition(
+          (pos) => {
+            const { latitude: lat, longitude: lng } = pos.coords;
+
+            if (!playerMarkerRef.current) {
+              playerMarkerRef.current = L.marker([lat, lng], { icon: playerIcon })
+                .addTo(map)
+                .bindPopup("現在地");
+
+              if (!initialLocSet) {
+                initialLocSet = true;
+                map.setView([lat, lng], 17);
+                placeShops(lat, lng);
+              }
+            } else {
+              playerMarkerRef.current.setLatLng([lat, lng]);
+            }
+          },
+          (err) => {
+            const msg =
+              err.code === 1
+                ? "位置情報の許可が必要です"
+                : "現在地を取得できませんでした";
+            setLocationError(msg);
+            placeShops(35.6812, 139.7671);
+          },
+          { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+        );
+      } else {
+        placeShops(35.6812, 139.7671);
+      }
+    })();
+
+    return () => {
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+        playerMarkerRef.current = null;
+      }
+    };
   }, []);
 
-  // 近くの店舗を取得
-  const fetchNearbyShops = async (lat: number, lng: number) => {
-    try {
-      const res = await fetch(`/api/shops?latitude=${lat}&longitude=${lng}&radius=10000`);
-      const data = await res.json();
-      if (data.ok) {
-        setShops(data.data);
-      }
-    } catch (err) {
-      console.error("店舗データ取得エラー:", err);
-    }
+  // 現在地ボタン
+  const handleLocateMe = () => {
+    if (!mapInstanceRef.current || !playerMarkerRef.current) return;
+    mapInstanceRef.current.setView(playerMarkerRef.current.getLatLng(), 17);
   };
-
-  // Google Maps を初期化
-  useEffect(() => {
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-    if (!apiKey || mapLoaded) return;
-
-    const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap`;
-    script.async = true;
-    script.defer = true;
-
-    // コールバック関数を定義
-    (window as unknown as Record<string, unknown>).initMap = () => {
-      setMapLoaded(true);
-    };
-
-    document.head.appendChild(script);
-  }, [mapLoaded]);
-
-  // 地図にマーカーを表示
-  useEffect(() => {
-    if (!mapLoaded || !mapRef.current) return;
-
-    const center = userLocation ?? { lat: 35.6812, lng: 139.7671 };
-    const google = (window as unknown as { google: { maps: { Map: new (el: HTMLElement, opts: object) => object; Marker: new (opts: object) => { addListener: (event: string, cb: () => void) => void }; InfoWindow: new (opts: object) => { open: (map: object, marker: object) => void }; ControlPosition: { TOP_RIGHT: string } } } }).google;
-
-    const map = new google.maps.Map(mapRef.current, {
-      center,
-      zoom: 15,
-      mapTypeControl: false,
-      fullscreenControl: false,
-    });
-
-    // ユーザー位置マーカー
-    if (userLocation) {
-      new google.maps.Marker({
-        position: userLocation,
-        map,
-        icon: {
-          url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(
-            '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="#4CAF82" stroke="white" stroke-width="2"/></svg>'
-          ),
-          scaledSize: { width: 24, height: 24 },
-        },
-        title: "現在地",
-      });
-    }
-
-    // 店舗マーカー
-    shops.forEach((shop) => {
-      const marker = new google.maps.Marker({
-        position: { lat: shop.latitude, lng: shop.longitude },
-        map,
-        title: shop.name,
-        label: "🌰",
-      });
-
-      marker.addListener("click", () => {
-        setSelectedShop(shop);
-      });
-    });
-  }, [mapLoaded, shops, userLocation]);
 
   return (
     <div className="relative w-full h-full">
-      {/* 地図 */}
+      {/* Leaflet地図 */}
       <div ref={mapRef} className="w-full h-full" />
 
-      {/* APIキーがない場合のフォールバック */}
-      {!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
-        <div className="absolute inset-0 bg-green-50 flex flex-col items-center justify-center">
-          <div className="text-6xl mb-4">🗺️</div>
-          <p className="text-gray-500 text-sm">Google Maps APIキーを設定してください</p>
-          <p className="text-gray-400 text-xs mt-1">NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</p>
+      {/* 位置情報エラー */}
+      {locationError && (
+        <div className="absolute top-2 left-2 right-2 bg-white/90 backdrop-blur-sm rounded-lg shadow px-3 py-2 z-[1000] text-sm text-gray-600 text-center">
+          📍 {locationError}
         </div>
       )}
 
+      {/* 現在地ボタン */}
+      <button
+        onClick={handleLocateMe}
+        className="absolute top-4 right-4 bg-white rounded-full shadow-md p-3 text-xl z-[1000] active:bg-gray-100 touch-manipulation"
+        title="現在地に戻る"
+        aria-label="現在地に戻る"
+      >
+        📍
+      </button>
+
       {/* 店舗情報ポップアップ */}
       {selectedShop && (
-        <div className="absolute bottom-4 left-4 right-4 bg-white rounded-xl shadow-lg p-4 z-10">
+        <div className="absolute bottom-4 left-4 right-4 bg-white rounded-xl shadow-lg p-4 z-[1000]">
           <button
             onClick={() => setSelectedShop(null)}
-            className="absolute top-2 right-3 text-gray-400 text-xl"
+            className="absolute top-2 right-3 text-gray-400 text-2xl leading-none p-1 touch-manipulation"
+            aria-label="閉じる"
           >
             ×
           </button>
           <div className="flex items-start gap-3">
-            <div className="bg-green-100 rounded-xl p-3 text-2xl">🏪</div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-gray-800">{selectedShop.name}</h3>
+            <div className="bg-green-100 rounded-xl p-3 text-2xl flex-shrink-0">🏪</div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-bold text-gray-800 truncate">{selectedShop.name}</h3>
                 {selectedShop.isPremium && (
-                  <span className="text-xs bg-yellow-100 text-yellow-600 px-2 py-0.5 rounded-full">✨</span>
+                  <span className="text-xs bg-yellow-100 text-yellow-600 px-2 py-0.5 rounded-full flex-shrink-0">
+                    ✨ プレミアム
+                  </span>
                 )}
               </div>
-              <p className="text-xs text-gray-500 mt-0.5">{selectedShop.address}</p>
+              <p className="text-xs text-gray-500 mt-0.5 truncate">{selectedShop.address}</p>
               <div className="flex items-center gap-3 mt-2">
-                <span className="text-sm font-medium text-green-600">🌰 +{selectedShop.acornAmount}個</span>
+                <span className="text-sm font-medium text-green-600">
+                  🌰 +{selectedShop.acornAmount}個
+                </span>
                 {selectedShop.distance && (
-                  <span className="text-sm text-gray-400">{Math.round(selectedShop.distance)}m</span>
+                  <span className="text-sm text-gray-400">
+                    {Math.round(selectedShop.distance)}m
+                  </span>
                 )}
               </div>
             </div>
           </div>
           <a
             href="/scan"
-            className="mt-3 block bg-green-600 text-white text-center py-2.5 rounded-xl text-sm font-bold"
+            className="mt-3 block bg-green-600 text-white text-center py-3 rounded-xl text-sm font-bold active:bg-green-700 touch-manipulation"
           >
             📷 QRをスキャンしてどんぐりをゲット
           </a>
         </div>
       )}
-
-      {/* 現在地ボタン */}
-      <button
-        onClick={() => {
-          if (userLocation && mapLoaded) {
-            // 地図を現在地に移動（再初期化で対応）
-          }
-        }}
-        className="absolute top-4 right-4 bg-white rounded-full shadow-md p-3 text-xl z-10"
-        title="現在地に戻る"
-      >
-        📍
-      </button>
     </div>
   );
 }
