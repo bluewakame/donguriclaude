@@ -1,5 +1,5 @@
-// ウォレット（残高確認）ページ
-export const dynamic = 'force-dynamic';
+// ウォレットページ（残高・ゆでる・交換・森の可視化）
+export const dynamic = "force-dynamic";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import AcornWallet from "@/components/AcornWallet";
@@ -10,7 +10,6 @@ import Link from "next/link";
 export default async function WalletPage() {
   const session = await auth();
 
-  // ユーザー情報と期限切れ間近のどんぐりを取得
   const user = await prisma.user.findUnique({
     where: { id: session!.user!.id! },
     select: {
@@ -21,6 +20,7 @@ export default async function WalletPage() {
     },
   });
 
+  // 3日以内に期限が切れるどんぐりを取得
   const threeDaysFromNow = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
   const expiringAcorns = await prisma.acornExpiry.findMany({
     where: {
@@ -32,6 +32,10 @@ export default async function WalletPage() {
     take: 5,
   });
 
+  const acorns = user?.acornBalance ?? 0;
+  const leaves = user?.leafBalance ?? 0;
+  const golden = user?.goldenAcornBalance ?? 0;
+
   return (
     <div className="max-w-lg mx-auto px-4 py-6">
       {/* ヘッダー */}
@@ -40,11 +44,11 @@ export default async function WalletPage() {
         <p className="text-gray-500 text-sm">あなたのどんぐりを管理しよう</p>
       </header>
 
-      {/* 残高表示 */}
+      {/* 残高カード */}
       <AcornWallet
-        acornBalance={user?.acornBalance ?? 0}
-        leafBalance={user?.leafBalance ?? 0}
-        goldenAcornBalance={user?.goldenAcornBalance ?? 0}
+        acornBalance={acorns}
+        leafBalance={leaves}
+        goldenAcornBalance={golden}
         lastBoiledAt={user?.lastBoiledAt ?? null}
       />
 
@@ -53,37 +57,51 @@ export default async function WalletPage() {
         <div className="mt-4 bg-orange-50 border border-orange-200 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-2">
             <span className="text-orange-500">⚠️</span>
-            <h3 className="font-medium text-orange-700">もうすぐ消えるどんぐり</h3>
+            <h3 className="font-medium text-orange-700">
+              もうすぐ消えるどんぐり
+            </h3>
           </div>
-          {expiringAcorns.map((expiry) => (
-            <div key={expiry.id} className="text-sm text-orange-600 flex justify-between">
-              <span>🌰 {expiry.amount}個</span>
-              <span>
-                {new Date(expiry.expiresAt).toLocaleDateString("ja-JP", {
-                  month: "numeric",
-                  day: "numeric",
-                  hour: "numeric",
-                  minute: "numeric",
-                })}まで
-              </span>
-            </div>
-          ))}
-          <p className="text-xs text-orange-500 mt-2">ゆでて有効期限を延ばそう！</p>
+          <div className="space-y-1">
+            {expiringAcorns.map((expiry) => (
+              <div
+                key={expiry.id}
+                className="text-sm text-orange-600 flex justify-between"
+              >
+                <span>🌰 {expiry.amount}個</span>
+                <span>
+                  {new Date(expiry.expiresAt).toLocaleDateString("ja-JP", {
+                    month: "numeric",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "numeric",
+                  })}
+                  まで
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-orange-500 mt-2">
+            今すぐゆでて有効期限を延ばそう！
+          </p>
         </div>
       )}
 
       {/* 森の可視化 */}
       <div className="mt-6">
-        <ForestView acornBalance={user?.acornBalance ?? 0} />
+        <ForestView acornBalance={acorns} />
       </div>
 
-      {/* ゆでるボタン */}
-      <div className="mt-4">
-        <BoilButton currentBalance={user?.acornBalance ?? 0} />
+      {/* ゆでるセクション */}
+      <div className="mt-6 bg-white rounded-xl border border-gray-200 p-5">
+        <h2 className="font-bold text-gray-700 mb-1">🫕 どんぐりをゆでる</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          ゆでると有効期限が7日間延長されます
+        </p>
+        <BoilButton currentBalance={acorns} />
       </div>
 
-      {/* 金のどんぐりショップリンク */}
-      {(user?.goldenAcornBalance ?? 0) > 0 && (
+      {/* アクションリンク */}
+      {golden > 0 && (
         <Link
           href="/shop"
           className="mt-4 w-full flex items-center justify-between bg-yellow-50 border border-yellow-300 rounded-xl p-4 hover:bg-yellow-100 transition-colors"
@@ -92,14 +110,15 @@ export default async function WalletPage() {
             <span className="text-2xl">✨</span>
             <div>
               <p className="font-medium text-yellow-800">金のどんぐりショップ</p>
-              <p className="text-sm text-yellow-600">金のどんぐりでアイテムと交換</p>
+              <p className="text-sm text-yellow-600">
+                金のどんぐりでアイテムと交換
+              </p>
             </div>
           </div>
           <span className="text-gray-400">›</span>
         </Link>
       )}
 
-      {/* 葉っぱ交換リンク */}
       <Link
         href="/exchange"
         className="mt-4 w-full flex items-center justify-between bg-green-50 border border-green-200 rounded-xl p-4 hover:bg-green-100 transition-colors"
@@ -114,7 +133,6 @@ export default async function WalletPage() {
         <span className="text-gray-400">›</span>
       </Link>
 
-      {/* 取引履歴リンク */}
       <Link
         href="/history"
         className="mt-3 w-full flex items-center justify-between bg-gray-50 border border-gray-200 rounded-xl p-4 hover:bg-gray-100 transition-colors"

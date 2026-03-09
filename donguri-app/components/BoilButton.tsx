@@ -1,12 +1,14 @@
 "use client";
 // ゆでるボタンコンポーネント
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface BoilButtonProps {
   currentBalance: number;
 }
 
 export default function BoilButton({ currentBalance }: BoilButtonProps) {
+  const router = useRouter();
   const [isBoiling, setIsBoiling] = useState(false);
   const [result, setResult] = useState<{
     ok: boolean;
@@ -22,12 +24,13 @@ export default function BoilButton({ currentBalance }: BoilButtonProps) {
     setResult(null);
 
     try {
-      const res = await fetch("/api/tokens/boil", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
+      const res = await fetch("/api/tokens/boil", { method: "POST" });
       const data = await res.json();
       setResult(data);
+      // ゆで成功後にサーバーデータを再取得（有効期限・最終ゆで日時を更新）
+      if (data.ok) {
+        router.refresh();
+      }
     } catch {
       setResult({ ok: false, message: "通信エラーが発生しました" });
     } finally {
@@ -41,7 +44,9 @@ export default function BoilButton({ currentBalance }: BoilButtonProps) {
       {result && (
         <div
           className={`p-4 rounded-xl text-center ${
-            result.ok ? "bg-orange-50 border border-orange-200" : "bg-red-50 border border-red-200"
+            result.ok
+              ? "bg-orange-50 border border-orange-200"
+              : "bg-red-50 border border-red-200"
           }`}
         >
           {result.ok ? (

@@ -7,9 +7,11 @@ export default function ExchangePage() {
   const [acornBalance, setAcornBalance] = useState(0);
   const [leafAmount, setLeafAmount] = useState(10);
   const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
-  // 残高を取得
   useEffect(() => {
     fetch("/api/users/me/wallet")
       .then((r) => r.json())
@@ -22,6 +24,7 @@ export default function ExchangePage() {
   }, []);
 
   const acornPreview = Math.floor(leafAmount / 10);
+  const maxLeaves = Math.floor(leafBalance / 10) * 10;
 
   const handleExchange = async () => {
     if (leafAmount < 10 || leafAmount % 10 !== 0) {
@@ -48,7 +51,7 @@ export default function ExchangePage() {
         setLeafBalance(data.newLeafBalance);
         setAcornBalance(data.newAcornBalance);
         setMessage({ type: "success", text: data.message });
-        setLeafAmount(10);
+        setLeafAmount(Math.min(10, Math.floor(data.newLeafBalance / 10) * 10) || 10);
       } else {
         setMessage({ type: "error", text: data.message });
       }
@@ -61,7 +64,6 @@ export default function ExchangePage() {
 
   return (
     <div className="max-w-lg mx-auto px-4 py-6">
-      {/* ヘッダー */}
       <header className="mb-6 text-center">
         <div className="text-6xl mb-3">🍃</div>
         <h1 className="text-2xl font-bold text-gray-800">葉っぱを交換</h1>
@@ -72,11 +74,15 @@ export default function ExchangePage() {
       <div className="grid grid-cols-2 gap-3 mb-6">
         <div className="bg-green-50 rounded-xl p-4 text-center">
           <p className="text-sm text-gray-500 mb-1">葉っぱ</p>
-          <div className="text-3xl font-bold text-green-700">🍃 {leafBalance}</div>
+          <div className="text-3xl font-bold text-green-700 tabular-nums">
+            🍃 {leafBalance}
+          </div>
         </div>
         <div className="bg-amber-50 rounded-xl p-4 text-center">
           <p className="text-sm text-gray-500 mb-1">どんぐり</p>
-          <div className="text-3xl font-bold text-amber-700">🌰 {acornBalance}</div>
+          <div className="text-3xl font-bold text-amber-700 tabular-nums">
+            🌰 {acornBalance}
+          </div>
         </div>
       </div>
 
@@ -87,28 +93,33 @@ export default function ExchangePage() {
         <div className="flex items-center gap-3 mb-4">
           <button
             onClick={() => setLeafAmount(Math.max(10, leafAmount - 10))}
-            className="w-10 h-10 rounded-full border-2 border-gray-300 font-bold text-gray-600 hover:border-green-500 hover:text-green-600 transition-colors"
+            disabled={leafAmount <= 10}
+            className="w-11 h-11 rounded-full border-2 border-gray-300 font-bold text-gray-600 hover:border-green-500 hover:text-green-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             −
           </button>
           <div className="flex-1 text-center">
-            <span className="text-3xl font-bold text-gray-800">🍃 {leafAmount}</span>
+            <span className="text-3xl font-bold text-gray-800 tabular-nums">
+              🍃 {leafAmount}
+            </span>
           </div>
           <button
-            onClick={() => setLeafAmount(Math.min(leafBalance, leafAmount + 10))}
-            className="w-10 h-10 rounded-full border-2 border-gray-300 font-bold text-gray-600 hover:border-green-500 hover:text-green-600 transition-colors"
+            onClick={() => setLeafAmount(Math.min(maxLeaves, leafAmount + 10))}
+            disabled={leafAmount >= maxLeaves}
+            className="w-11 h-11 rounded-full border-2 border-gray-300 font-bold text-gray-600 hover:border-green-500 hover:text-green-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             ＋
           </button>
         </div>
 
-        {/* 交換後のプレビュー */}
+        {/* 交換後プレビュー */}
         <div className="bg-gray-50 rounded-lg p-3 text-center mb-4">
-          <p className="text-sm text-gray-500">交換後に獲得できるどんぐり</p>
-          <p className="text-2xl font-bold text-green-700">🌰 {acornPreview}個</p>
+          <p className="text-sm text-gray-500">獲得できるどんぐり</p>
+          <p className="text-2xl font-bold text-green-700 tabular-nums">
+            🌰 {acornPreview}個
+          </p>
         </div>
 
-        {/* メッセージ */}
         {message && (
           <div
             className={`p-3 rounded-lg text-sm mb-4 ${
@@ -121,22 +132,23 @@ export default function ExchangePage() {
           </div>
         )}
 
-        {/* 交換ボタン */}
         <button
           onClick={handleExchange}
-          disabled={isLoading || leafAmount > leafBalance || acornPreview === 0}
+          disabled={
+            isLoading || leafAmount > leafBalance || acornPreview === 0
+          }
           className="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isLoading ? "交換中..." : `葉っぱ${leafAmount}枚をどんぐり${acornPreview}個に交換`}
+          {isLoading
+            ? "交換中..."
+            : `葉っぱ${leafAmount}枚 → どんぐり${acornPreview}個に交換`}
         </button>
       </div>
 
-      {/* 説明 */}
       <div className="mt-4 bg-blue-50 rounded-xl p-4">
         <h3 className="font-medium text-blue-800 mb-2">🍃 葉っぱって何？</h3>
         <p className="text-sm text-blue-700">
-          葉っぱはキャンペーンや特別なアクションでもらえます。
-          10枚集めるとどんぐり1個と交換できます。
+          葉っぱはマップを歩いて集められます。10枚集めるとどんぐり1個と交換できます。
         </p>
       </div>
     </div>

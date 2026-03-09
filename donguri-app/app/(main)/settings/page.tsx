@@ -8,9 +8,11 @@ export default function SettingsPage() {
   const [email, setEmail] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
-  // プロフィールを取得
   useEffect(() => {
     fetch("/api/users/me")
       .then((r) => r.json())
@@ -22,7 +24,6 @@ export default function SettingsPage() {
       });
   }, []);
 
-  // プロフィールを更新
   const handleSave = async () => {
     setIsSaving(true);
     setMessage(null);
@@ -50,7 +51,6 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-lg mx-auto px-4 py-6">
-      {/* ヘッダー */}
       <header className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800">設定</h1>
         <p className="text-gray-500 text-sm">プロフィールの管理</p>
@@ -72,7 +72,9 @@ export default function SettingsPage() {
         {message && (
           <div
             className={`p-3 rounded-lg text-sm mb-4 ${
-              message.type === "success" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"
+              message.type === "success"
+                ? "bg-green-50 text-green-700"
+                : "bg-red-50 text-red-600"
             }`}
           >
             {message.text}
@@ -81,7 +83,9 @@ export default function SettingsPage() {
 
         <div className="space-y-3">
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">表示名</label>
+            <label className="block text-sm font-medium text-gray-600 mb-1">
+              表示名
+            </label>
             {isEditing ? (
               <input
                 type="text"
@@ -95,7 +99,9 @@ export default function SettingsPage() {
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">メールアドレス</label>
+            <label className="block text-sm font-medium text-gray-600 mb-1">
+              メールアドレス
+            </label>
             <p className="text-gray-500 py-2 text-sm">{email}</p>
           </div>
         </div>
@@ -104,7 +110,7 @@ export default function SettingsPage() {
           <div className="flex gap-2 mt-4">
             <button
               onClick={handleSave}
-              disabled={isSaving}
+              disabled={isSaving || !displayName.trim()}
               className="flex-1 bg-green-600 text-white py-2 rounded-xl font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
             >
               {isSaving ? "保存中..." : "保存する"}
@@ -126,16 +132,22 @@ export default function SettingsPage() {
         )}
       </div>
 
-      {/* その他の設定リスト */}
+      {/* メニューリスト */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-4">
-        <a href="/shops" className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 border-b border-gray-100">
+        <a
+          href="/shops"
+          className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 border-b border-gray-100 transition-colors"
+        >
           <span className="flex items-center gap-3">
             <span>🏪</span>
             <span className="text-gray-700">加盟店一覧</span>
           </span>
           <span className="text-gray-400">›</span>
         </a>
-        <a href="/merchant/dashboard" className="flex items-center justify-between px-5 py-4 hover:bg-gray-50">
+        <a
+          href="/merchant/dashboard"
+          className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors"
+        >
           <span className="flex items-center gap-3">
             <span>🏷️</span>
             <span className="text-gray-700">加盟店として登録</span>
