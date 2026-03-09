@@ -13,6 +13,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -21,8 +22,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja">
-      <body className="bg-gray-50 min-h-screen">{children}</body>
+    <html lang="ja" className="h-dvh overflow-hidden">
+      <body className="bg-gray-50 h-full overflow-hidden">{children}</body>
     </html>
   );
 }

@@ -20,7 +20,7 @@ export default async function HomePage() {
   });
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-full">
       {/* チュートリアル（新規ユーザー向け） */}
       <Tutorial />
       {/* ヘッダー */}
