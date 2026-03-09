@@ -2,8 +2,11 @@
 export const dynamic = 'force-dynamic';
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import { auth } from "@/lib/auth";
 
 export default async function ShopsPage() {
+  const session = await auth();
+
   const shops = await prisma.shop.findMany({
     select: {
       id: true,
@@ -57,6 +60,25 @@ export default async function ShopsPage() {
           <p>加盟店が登録されていません</p>
         </div>
       )}
+
+      {/* 管理者ログインリンク */}
+      <div className="mt-10 pt-6 border-t border-gray-100 text-center">
+        {session?.user ? (
+          <Link
+            href="/admin/dashboard"
+            className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            🛡️ 管理者ダッシュボード
+          </Link>
+        ) : (
+          <Link
+            href="/admin/login"
+            className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            🛡️ 管理者ログイン
+          </Link>
+        )}
+      </div>
     </div>
   );
 }
