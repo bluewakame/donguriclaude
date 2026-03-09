@@ -17,6 +17,7 @@ model User {
   leafBalance         Int       @default(0)
   goldenAcornBalance  Int       @default(0)
   lastBoiledAt        DateTime?
+  tutorialDone        Boolean   @default(false)
   createdAt           DateTime  @default(now())
 
   visitLogs           VisitLog[]
