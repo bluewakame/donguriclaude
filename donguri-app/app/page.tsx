@@ -3,69 +3,64 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-green-50 to-green-100 px-4">
+    <main className="h-svh flex flex-col items-center bg-gradient-to-b from-green-50 to-green-100 px-4">
       {/* ロゴ・ヒーローセクション */}
-      <div className="text-center mb-12">
-        <div className="text-8xl mb-4 animate-bounce">🌰</div>
-        <h1 className="text-4xl font-bold text-green-800 mb-2">どんぐり</h1>
-        <p className="text-green-600 text-lg">ポイ活アプリ</p>
-        <p className="mt-4 text-gray-600 max-w-sm">
-          提携店舗に来店するだけで<br />
-          デジタルトークン「どんぐり」がもらえる！
-        </p>
+      <div className="flex-none flex flex-col items-center pt-8 pb-3 gap-1">
+        <div className="text-5xl">🌰</div>
+        <h1 className="text-2xl font-bold text-green-800">どんぐり</h1>
+        <p className="text-xs text-green-600">提携店舗に来店するだけでどんぐりがもらえる！</p>
       </div>
 
       {/* 特徴 */}
-      <div className="grid grid-cols-1 gap-4 mb-12 max-w-sm w-full">
-        <div className="bg-white rounded-xl p-4 shadow-sm flex items-center gap-4">
-          <span className="text-3xl">🗺️</span>
-          <div>
-            <h3 className="font-semibold text-gray-800">近くの店舗を探す</h3>
-            <p className="text-sm text-gray-500">地図で提携店舗を確認</p>
+      <div className="flex-1 flex items-center justify-center w-full max-w-sm min-h-0">
+        <div className="grid grid-cols-2 gap-2 w-full">
+          <div className="bg-white rounded-xl p-3 shadow-sm flex items-center gap-2">
+            <span className="text-xl flex-none">🗺️</span>
+            <div className="min-w-0">
+              <h3 className="font-semibold text-gray-800 text-sm">店舗を探す</h3>
+              <p className="text-xs text-gray-500">地図で確認</p>
+            </div>
           </div>
-        </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm flex items-center gap-4">
-          <span className="text-3xl">📱</span>
-          <div>
-            <h3 className="font-semibold text-gray-800">QRコードでチェックイン</h3>
-            <p className="text-sm text-gray-500">来店してどんぐりをゲット</p>
+          <div className="bg-white rounded-xl p-3 shadow-sm flex items-center gap-2">
+            <span className="text-xl flex-none">📱</span>
+            <div className="min-w-0">
+              <h3 className="font-semibold text-gray-800 text-sm">QRチェックイン</h3>
+              <p className="text-xs text-gray-500">来店してゲット</p>
+            </div>
           </div>
-        </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm flex items-center gap-4">
-          <span className="text-3xl">🍃</span>
-          <div>
-            <h3 className="font-semibold text-gray-800">葉っぱと交換</h3>
-            <p className="text-sm text-gray-500">葉っぱ10枚 = どんぐり1個</p>
+          <div className="bg-white rounded-xl p-3 shadow-sm flex items-center gap-2">
+            <span className="text-xl flex-none">🍃</span>
+            <div className="min-w-0">
+              <h3 className="font-semibold text-gray-800 text-sm">葉っぱと交換</h3>
+              <p className="text-xs text-gray-500">10枚 = 1個</p>
+            </div>
           </div>
-        </div>
-        <div className="bg-white rounded-xl p-4 shadow-sm flex items-center gap-4">
-          <span className="text-3xl">✨</span>
-          <div>
-            <h3 className="font-semibold text-gray-800">金のどんぐりを狙え！</h3>
-            <p className="text-sm text-gray-500">運が良ければレアなどんぐりが！</p>
+          <div className="bg-white rounded-xl p-3 shadow-sm flex items-center gap-2">
+            <span className="text-xl flex-none">✨</span>
+            <div className="min-w-0">
+              <h3 className="font-semibold text-gray-800 text-sm">金のどんぐり</h3>
+              <p className="text-xs text-gray-500">レアなどんぐりも！</p>
+            </div>
           </div>
         </div>
       </div>
 
       {/* CTAボタン */}
-      <div className="flex flex-col gap-3 w-full max-w-sm">
+      <div className="flex-none flex flex-col gap-2 w-full max-w-sm pb-8">
         <Link
           href="/register"
-          className="bg-green-600 text-white text-center py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-green-700 transition-colors"
+          className="bg-green-600 text-white text-center py-3 rounded-xl font-bold text-base shadow-lg hover:bg-green-700 transition-colors"
         >
           はじめる（無料）
         </Link>
         <Link
           href="/login"
-          className="bg-white text-green-600 text-center py-4 rounded-xl font-bold text-lg border-2 border-green-600 hover:bg-green-50 transition-colors"
+          className="bg-white text-green-600 text-center py-3 rounded-xl font-bold text-base border-2 border-green-600 hover:bg-green-50 transition-colors"
         >
           ログイン
         </Link>
+        <p className="text-center text-xs text-gray-400">どんぐり © 2024</p>
       </div>
-
-      <p className="mt-8 text-xs text-gray-400">
-        どんぐり © 2024
-      </p>
     </main>
   );
 }
