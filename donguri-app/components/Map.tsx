@@ -291,14 +291,15 @@ export default function Map() {
   return (
     <div className="relative w-full h-full">
       {/* 地図 */}
-      <div ref={mapRef} className="w-full h-full" />
+      {/* isolation: isolateでLeafletのz-indexをこのdiv内に封じ込める */}
+      <div ref={mapRef} className="w-full h-full" style={{ isolation: "isolate" }} />
 
       {/* 葉っぱマーカー */}
       {leafMarkers.map((leaf) => (
         <button
           key={leaf.id}
           onClick={() => collectLeaf(leaf.id, leaf.lat, leaf.lng)}
-          className="absolute text-2xl hover:scale-125 transition-transform cursor-pointer z-20 animate-bounce"
+          className="absolute text-2xl hover:scale-125 transition-transform cursor-pointer z-[500] animate-bounce"
           style={{ left: `${leaf.screenX}%`, top: `${leaf.screenY}%` }}
           title="葉っぱを拾う"
           aria-label="葉っぱを拾う"
