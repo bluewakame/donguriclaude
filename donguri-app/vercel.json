@@ -1,8 +1,1 @@
-{
-  "crons": [
-    {
-      "path": "/api/cron/expire-acorns",
-      "schedule": "0 0 * * *"
-    }
-  ]
-}
+{}
