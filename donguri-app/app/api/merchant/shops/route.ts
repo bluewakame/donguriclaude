@@ -1,4 +1,5 @@
 // POST: 加盟店登録申請
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";

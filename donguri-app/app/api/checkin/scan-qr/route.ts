@@ -1,4 +1,5 @@
 // POST: QRスキャンでどんぐり獲得
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { verifyQrToken } from "@/lib/qrcode";

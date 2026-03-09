@@ -1,4 +1,5 @@
 // POST: どんぐりをゆでる（有効期限をリセット）
+export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { boilAcorns } from "@/lib/token";

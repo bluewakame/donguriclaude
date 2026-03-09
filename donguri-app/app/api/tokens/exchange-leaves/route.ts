@@ -1,4 +1,5 @@
 // POST: 葉っぱ→どんぐり交換
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { exchangeLeaves } from "@/lib/token";

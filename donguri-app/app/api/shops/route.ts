@@ -1,4 +1,5 @@
 // GET: 近くの加盟店一覧を取得
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { haversineDistance } from "@/lib/haversine";

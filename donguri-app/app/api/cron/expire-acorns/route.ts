@@ -1,5 +1,6 @@
 // 毎日深夜0時に実行されるcronジョブ: 期限切れどんぐりを消滅させる
 // Vercelのcron設定（vercel.json）から呼び出される
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { expireAcorns } from "@/lib/token";
 
