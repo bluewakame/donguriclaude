@@ -1,9 +1,28 @@
-// POST: 加盟店登録申請
+// POST: 加盟店登録申請 / GET: 自分が登録した店舗一覧
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateQrToken, getQrExpiry } from "@/lib/qrcode";
+
+export async function GET() {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ ok: false, message: "ログインが必要です" }, { status: 401 });
+    }
+
+    const shops = await prisma.shop.findMany({
+      where: { createdBy: session.user.id },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return NextResponse.json({ ok: true, data: shops });
+  } catch (error) {
+    console.error("店舗一覧取得エラー:", error);
+    return NextResponse.json({ ok: false, message: "サーバーエラーが発生しました" }, { status: 500 });
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,6 +58,7 @@ export async function POST(request: NextRequest) {
         qrCodeToken,
         qrExpiresAt,
         status: "pending",
+        createdBy: session.user.id,
       },
     });
 
