@@ -146,11 +146,21 @@ export default function SettingsPage() {
         </a>
         <a
           href="/merchant/dashboard"
-          className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors"
+          className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 border-b border-gray-100 transition-colors"
         >
           <span className="flex items-center gap-3">
             <span>🏷️</span>
             <span className="text-gray-700">加盟店として登録</span>
+          </span>
+          <span className="text-gray-400">›</span>
+        </a>
+        <a
+          href="/merchant/dashboard#registered-shops"
+          className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors"
+        >
+          <span className="flex items-center gap-3">
+            <span>📌</span>
+            <span className="text-gray-700">登録した店舗</span>
           </span>
           <span className="text-gray-400">›</span>
         </a>
