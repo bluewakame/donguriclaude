@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
+import BottomNav from "@/components/BottomNav";
 
 export default async function ShopsPage() {
   const session = await auth();
@@ -19,7 +20,9 @@ export default async function ShopsPage() {
   });
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-6">
+    <div className="flex flex-col h-dvh overflow-hidden">
+      <main className="flex-1 overflow-y-auto pb-20">
+        <div className="max-w-lg mx-auto px-4 py-6">
       {/* ヘッダー */}
       <header className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800">加盟店一覧</h1>
@@ -61,24 +64,27 @@ export default async function ShopsPage() {
         </div>
       )}
 
-      {/* 管理者ログインリンク */}
-      <div className="mt-10 pt-6 border-t border-gray-100 text-center">
-        {session?.user ? (
-          <Link
-            href="/admin/dashboard"
-            className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            🛡️ 管理者ダッシュボード
-          </Link>
-        ) : (
-          <Link
-            href="/admin/login"
-            className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            🛡️ 管理者ログイン
-          </Link>
-        )}
-      </div>
+          {/* 管理者ログインリンク */}
+          <div className="mt-10 pt-6 border-t border-gray-100 text-center">
+            {session?.user ? (
+              <Link
+                href="/admin/dashboard"
+                className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                🛡️ 管理者ダッシュボード
+              </Link>
+            ) : (
+              <Link
+                href="/admin/login"
+                className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                🛡️ 管理者ログイン
+              </Link>
+            )}
+          </div>
+        </div>
+      </main>
+      <BottomNav />
     </div>
   );
 }
