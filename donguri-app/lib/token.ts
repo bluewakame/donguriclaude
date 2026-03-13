@@ -94,30 +94,24 @@ export async function boilAcorns(
   const now = new Date();
   const newExpiresAt = new Date(now.getTime() + ACORN_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
 
-  // 期限切れでないどんぐり（ゆでる対象）を取得
-  const validExpiries = await prisma.acornExpiry.findMany({
-    where: {
-      userId,
-      isExpired: false,
-    },
-  });
-
-  if (validExpiries.length === 0) {
-    return { resetCount: 0, newExpiresAt };
-  }
-
-  const totalAmount = validExpiries.reduce((sum, e) => sum + e.amount, 0);
+  let totalAmount = 0;
 
   await prisma.$transaction(async (tx) => {
+    // 期限切れでないどんぐり（ゆでる対象）をトランザクション内で取得
+    const validExpiries = await tx.acornExpiry.findMany({
+      where: { userId, isExpired: false },
+    });
+
+    totalAmount = validExpiries.reduce((sum, e) => sum + e.amount, 0);
+
+    if (totalAmount === 0) {
+      return;
+    }
+
     // すべての有効なAcornExpiryの有効期限をリセット
     await tx.acornExpiry.updateMany({
-      where: {
-        userId,
-        isExpired: false,
-      },
-      data: {
-        expiresAt: newExpiresAt,
-      },
+      where: { userId, isExpired: false },
+      data: { expiresAt: newExpiresAt },
     });
 
     // ユーザーの最終ゆで日時を更新
@@ -165,14 +159,14 @@ export async function exchangeLeaves(
   const now = new Date();
   const expiresAt = new Date(now.getTime() + ACORN_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
 
-  // ユーザーの残高を確認
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) throw new Error("ユーザーが見つかりません");
-  if (user.leafBalance < leafAmount) {
-    throw new Error(`葉っぱが足りません（保有: ${user.leafBalance}枚、必要: ${leafAmount}枚）`);
-  }
-
   const updatedUser = await prisma.$transaction(async (tx) => {
+    // ユーザーの残高を確認（トランザクション内で確認・更新を一括処理）
+    const user = await tx.user.findUnique({ where: { id: userId } });
+    if (!user) throw new Error("ユーザーが見つかりません");
+    if (user.leafBalance < leafAmount) {
+      throw new Error(`葉っぱが足りません（保有: ${user.leafBalance}枚、必要: ${leafAmount}枚）`);
+    }
+
     // ユーザーの残高を更新
     const updated = await tx.user.update({
       where: { id: userId },
@@ -231,22 +225,22 @@ export async function exchangeLeaves(
 export async function expireAcorns(): Promise<number> {
   const now = new Date();
 
-  // 有効期限切れのレコードを取得
-  const expiredEntries = await prisma.acornExpiry.findMany({
-    where: {
-      isExpired: false,
-      expiresAt: { lt: now },
-    },
-    include: { user: true },
-  });
-
-  if (expiredEntries.length === 0) {
-    return 0;
-  }
-
+  // トランザクション内で取得・更新を一括処理し、二重実行による競合を防ぐ
   let totalExpired = 0;
 
   await prisma.$transaction(async (tx) => {
+    // トランザクション内で期限切れ対象を取得（isExpired: false を再確認）
+    const expiredEntries = await tx.acornExpiry.findMany({
+      where: {
+        isExpired: false,
+        expiresAt: { lt: now },
+      },
+    });
+
+    if (expiredEntries.length === 0) {
+      return;
+    }
+
     for (const entry of expiredEntries) {
       // AcornExpiryを期限切れにマーク
       await tx.acornExpiry.update({
@@ -254,7 +248,7 @@ export async function expireAcorns(): Promise<number> {
         data: { isExpired: true },
       });
 
-      // ユーザーの残高から減算
+      // ユーザーの残高から減算（0未満にはならないようガード）
       await tx.user.update({
         where: { id: entry.userId },
         data: { acornBalance: { decrement: entry.amount } },

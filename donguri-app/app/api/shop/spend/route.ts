@@ -42,124 +42,142 @@ export async function POST(req: NextRequest) {
   const item = SHOP_ITEMS[itemKey];
   const userId = session.user.id;
 
-  // ユーザー残高確認
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) {
-    return NextResponse.json({ ok: false, error: "ユーザーが見つかりません" }, { status: 404 });
-  }
-
-  if (user.goldenAcornBalance < item.goldCost) {
-    return NextResponse.json(
-      { ok: false, error: `金のどんぐりが足りません（必要: ${item.goldCost}個）` },
-      { status: 400 }
-    );
-  }
-
   const now = new Date();
 
   if (itemKey === "boost") {
-    // どんぐり+5個
+    // どんぐり+5個（残高確認と更新をトランザクション内で一括処理）
     const expiresAt = new Date(now.getTime() + ACORN_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
-    await prisma.$transaction(async (tx) => {
-      await tx.user.update({
-        where: { id: userId },
-        data: {
-          goldenAcornBalance: { decrement: item.goldCost },
-          acornBalance: { increment: 5 },
-        },
+    try {
+      await prisma.$transaction(async (tx) => {
+        const user = await tx.user.findUnique({ where: { id: userId } });
+        if (!user) throw Object.assign(new Error("ユーザーが見つかりません"), { code: "NOT_FOUND" });
+        if (user.goldenAcornBalance < item.goldCost) {
+          throw Object.assign(new Error(`金のどんぐりが足りません（必要: ${item.goldCost}個）`), { code: "INSUFFICIENT" });
+        }
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            goldenAcornBalance: { decrement: item.goldCost },
+            acornBalance: { increment: 5 },
+          },
+        });
+        await tx.acornExpiry.create({
+          data: { userId, amount: 5, expiresAt },
+        });
+        await tx.tokenTransaction.create({
+          data: {
+            userId,
+            type: "spend",
+            amount: item.goldCost,
+            tokenType: "golden_acorn",
+            note: "ショップ: どんぐりブースト購入",
+          },
+        });
+        await tx.tokenTransaction.create({
+          data: {
+            userId,
+            type: "earn",
+            amount: 5,
+            tokenType: "acorn",
+            note: "ショップ: どんぐりブースト（+5個）",
+          },
+        });
       });
-      await tx.acornExpiry.create({
-        data: { userId, amount: 5, expiresAt },
-      });
-      await tx.tokenTransaction.create({
-        data: {
-          userId,
-          type: "spend",
-          amount: item.goldCost,
-          tokenType: "golden_acorn",
-          note: "ショップ: どんぐりブースト購入",
-        },
-      });
-      await tx.tokenTransaction.create({
-        data: {
-          userId,
-          type: "earn",
-          amount: 5,
-          tokenType: "acorn",
-          note: "ショップ: どんぐりブースト（+5個）",
-        },
-      });
-    });
+    } catch (err: unknown) {
+      const e = err as { code?: string; message?: string };
+      if (e.code === "NOT_FOUND") return NextResponse.json({ ok: false, error: e.message }, { status: 404 });
+      if (e.code === "INSUFFICIENT") return NextResponse.json({ ok: false, error: e.message }, { status: 400 });
+      throw err;
+    }
     return NextResponse.json({ ok: true, message: "🌰 どんぐりを5個獲得しました！" });
   }
 
   if (itemKey === "leaves") {
-    // 葉っぱ+10枚
-    await prisma.$transaction(async (tx) => {
-      await tx.user.update({
-        where: { id: userId },
-        data: {
-          goldenAcornBalance: { decrement: item.goldCost },
-          leafBalance: { increment: 10 },
-        },
+    // 葉っぱ+10枚（残高確認と更新をトランザクション内で一括処理）
+    try {
+      await prisma.$transaction(async (tx) => {
+        const user = await tx.user.findUnique({ where: { id: userId } });
+        if (!user) throw Object.assign(new Error("ユーザーが見つかりません"), { code: "NOT_FOUND" });
+        if (user.goldenAcornBalance < item.goldCost) {
+          throw Object.assign(new Error(`金のどんぐりが足りません（必要: ${item.goldCost}個）`), { code: "INSUFFICIENT" });
+        }
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            goldenAcornBalance: { decrement: item.goldCost },
+            leafBalance: { increment: 10 },
+          },
+        });
+        await tx.tokenTransaction.create({
+          data: {
+            userId,
+            type: "spend",
+            amount: item.goldCost,
+            tokenType: "golden_acorn",
+            note: "ショップ: 葉っぱ袋購入",
+          },
+        });
+        await tx.tokenTransaction.create({
+          data: {
+            userId,
+            type: "earn",
+            amount: 10,
+            tokenType: "leaf",
+            note: "ショップ: 葉っぱ袋（+10枚）",
+          },
+        });
       });
-      await tx.tokenTransaction.create({
-        data: {
-          userId,
-          type: "spend",
-          amount: item.goldCost,
-          tokenType: "golden_acorn",
-          note: "ショップ: 葉っぱ袋購入",
-        },
-      });
-      await tx.tokenTransaction.create({
-        data: {
-          userId,
-          type: "earn",
-          amount: 10,
-          tokenType: "leaf",
-          note: "ショップ: 葉っぱ袋（+10枚）",
-        },
-      });
-    });
+    } catch (err: unknown) {
+      const e = err as { code?: string; message?: string };
+      if (e.code === "NOT_FOUND") return NextResponse.json({ ok: false, error: e.message }, { status: 404 });
+      if (e.code === "INSUFFICIENT") return NextResponse.json({ ok: false, error: e.message }, { status: 400 });
+      throw err;
+    }
     return NextResponse.json({ ok: true, message: "🍃 葉っぱを10枚獲得しました！" });
   }
 
   if (itemKey === "shield") {
-    // シールド: 24時間どんぐりを守る（有効期限を24時間延長）
+    // シールド: 24時間どんぐりを守る（残高確認と更新をトランザクション内で一括処理）
     const shieldHours = 24;
     const extendMs = shieldHours * 60 * 60 * 1000;
     const shieldExpiresAt = new Date(now.getTime() + extendMs);
 
-    await prisma.$transaction(async (tx) => {
-      // 期限切れでないどんぐりの有効期限を24時間延長
-      const validExpiries = await tx.acornExpiry.findMany({
-        where: { userId, isExpired: false },
-      });
+    try {
+      await prisma.$transaction(async (tx) => {
+        const user = await tx.user.findUnique({ where: { id: userId } });
+        if (!user) throw Object.assign(new Error("ユーザーが見つかりません"), { code: "NOT_FOUND" });
+        if (user.goldenAcornBalance < item.goldCost) {
+          throw Object.assign(new Error(`金のどんぐりが足りません（必要: ${item.goldCost}個）`), { code: "INSUFFICIENT" });
+        }
 
-      for (const expiry of validExpiries) {
-        const newExpiry = new Date(expiry.expiresAt.getTime() + extendMs);
-        await tx.acornExpiry.update({
-          where: { id: expiry.id },
-          data: { expiresAt: newExpiry },
+        // 期限切れでないどんぐりの有効期限を24時間延長（rawで一括更新）
+        await tx.$executeRaw`
+          UPDATE "AcornExpiry"
+          SET "expiresAt" = "expiresAt" + ${extendMs} * interval '1 millisecond'
+          WHERE "userId" = ${userId} AND "isExpired" = false
+        `;
+
+        await tx.user.update({
+          where: { id: userId },
+          data: { goldenAcornBalance: { decrement: item.goldCost } },
         });
-      }
 
-      await tx.user.update({
-        where: { id: userId },
-        data: { goldenAcornBalance: { decrement: item.goldCost } },
+        await tx.tokenTransaction.create({
+          data: {
+            userId,
+            type: "spend",
+            amount: item.goldCost,
+            tokenType: "golden_acorn",
+            note: `ショップ: シールド購入（有効期限+${shieldHours}時間）`,
+          },
+        });
       });
-
-      await tx.tokenTransaction.create({
-        data: {
-          userId,
-          type: "spend",
-          amount: item.goldCost,
-          tokenType: "golden_acorn",
-          note: `ショップ: シールド購入（有効期限+${shieldHours}時間）`,
-        },
-      });
-    });
+    } catch (err: unknown) {
+      const e = err as { code?: string; message?: string };
+      if (e.code === "NOT_FOUND") return NextResponse.json({ ok: false, error: e.message }, { status: 404 });
+      if (e.code === "INSUFFICIENT") return NextResponse.json({ ok: false, error: e.message }, { status: 400 });
+      throw err;
+    }
 
     return NextResponse.json({
       ok: true,

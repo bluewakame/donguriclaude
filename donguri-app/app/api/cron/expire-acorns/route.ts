@@ -6,12 +6,15 @@ import { expireAcorns } from "@/lib/token";
 
 export async function GET(request: NextRequest) {
   try {
-    // Vercel cronからのリクエストを検証（本番環境のみ）
+    // Vercel cronからのリクエストを検証
+    // CRON_SECRETが未設定の場合は本番・開発問わず常に拒否する
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret) {
+      console.error("CRON_SECRETが設定されていません。cronエンドポイントを無効化します。");
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
     const authHeader = request.headers.get("authorization");
-    if (
-      process.env.NODE_ENV === "production" &&
-      authHeader !== `Bearer ${process.env.CRON_SECRET}`
-    ) {
+    if (authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 

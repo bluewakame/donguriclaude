@@ -33,15 +33,16 @@ export async function verifyQrToken(
   qrToken: string
 ): Promise<{ valid: boolean; reason?: string; shop?: { id: string; name: string; acornAmount: number; goldenProbability: number } }> {
   try {
-    // 店舗をDBから取得
+    // 店舗をDBから取得（承認済み店舗のみ）
     const shop = await prisma.shop.findFirst({
       where: {
         id: shopId,
         qrCodeToken: qrToken,
+        status: "approved",
       },
     });
 
-    // トークンが存在しない場合
+    // トークンが存在しない、または未承認の場合
     if (!shop) {
       return { valid: false, reason: "無効なQRコードです" };
     }
@@ -69,18 +70,16 @@ export async function verifyQrToken(
 /**
  * 店舗のQRコードトークンを更新する（定期的に呼び出す）
  * @param shopId 店舗ID
+ * @returns 新しいトークンと有効期限
  */
-export async function refreshQrToken(shopId: string): Promise<string> {
-  const newToken = generateQrToken();
-  const newExpiry = getQrExpiry();
+export async function refreshQrToken(shopId: string): Promise<{ qrCodeToken: string; qrExpiresAt: Date }> {
+  const qrCodeToken = generateQrToken();
+  const qrExpiresAt = getQrExpiry();
 
   await prisma.shop.update({
     where: { id: shopId },
-    data: {
-      qrCodeToken: newToken,
-      qrExpiresAt: newExpiry,
-    },
+    data: { qrCodeToken, qrExpiresAt },
   });
 
-  return newToken;
+  return { qrCodeToken, qrExpiresAt };
 }
