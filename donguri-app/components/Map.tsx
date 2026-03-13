@@ -3,6 +3,27 @@ import "leaflet/dist/leaflet.css";
 // Leaflet + OpenStreetMap コンポーネント（葉っぱスポーン機能付き）
 import { useEffect, useRef, useState, useCallback } from "react";
 
+// Leafletモジュールをモジュールスコープでキャッシュ（再インポートを防ぐ）
+let leafletPromise: Promise<typeof import("leaflet").default> | null = null;
+function getLeaflet(): Promise<typeof import("leaflet").default> {
+  if (!leafletPromise) {
+    leafletPromise = import("leaflet").then((mod) => {
+      const L = mod.default;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl:
+          "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+        iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+        shadowUrl:
+          "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+      });
+      return L;
+    });
+  }
+  return leafletPromise;
+}
+
 interface Shop {
   id: string;
   name: string;
@@ -88,6 +109,7 @@ export default function Map() {
   );
   const lastSpawnTimeRef = useRef<number>(0);
   const hasInitialSpawnRef = useRef(false);
+  const hasCenteredMapRef = useRef(false);
   const userMarkerRef = useRef<import("leaflet").Marker | null>(null);
   const shopMarkersRef = useRef<import("leaflet").Marker[]>([]);
 
@@ -183,7 +205,9 @@ export default function Map() {
       () => {
         fetchNearbyShops(35.6812, 139.7671);
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+      // enableHighAccuracy: false で省電力かつ高速な位置取得
+    // maximumAge: 30000 でキャッシュ済み位置情報を最大30秒間再利用
+    { enableHighAccuracy: false, timeout: 15000, maximumAge: 30000 }
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
@@ -194,18 +218,7 @@ export default function Map() {
     if (!mapRef.current || mapInstanceRef.current) return;
 
     const initMap = async () => {
-      const L = (await import("leaflet")).default;
-      // Leaflet のデフォルトアイコン修正
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      delete (L.Icon.Default.prototype as any)._getIconUrl;
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl:
-          "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-        iconUrl:
-          "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-        shadowUrl:
-          "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-      });
+      const L = await getLeaflet();
 
       const center = userLocation ?? { lat: 35.6812, lng: 139.7671 };
       const map = L.map(mapRef.current!, {
@@ -239,7 +252,7 @@ export default function Map() {
     if (!mapInstanceRef.current || !userLocation) return;
 
     const updateMarker = async () => {
-      const L = (await import("leaflet")).default;
+      const L = await getLeaflet();
       const map = mapInstanceRef.current!;
 
       if (userMarkerRef.current) {
@@ -257,7 +270,11 @@ export default function Map() {
         ).addTo(map);
       }
 
-      map.setView([userLocation.lat, userLocation.lng], map.getZoom());
+      // 初回のみ地図を現在地に移動（以降はユーザーが自由にパン操作できる）
+      if (!hasCenteredMapRef.current) {
+        hasCenteredMapRef.current = true;
+        map.setView([userLocation.lat, userLocation.lng], map.getZoom());
+      }
     };
 
     updateMarker();
@@ -268,7 +285,7 @@ export default function Map() {
     if (!mapInstanceRef.current || shops.length === 0) return;
 
     const updateShopMarkers = async () => {
-      const L = (await import("leaflet")).default;
+      const L = await getLeaflet();
       const map = mapInstanceRef.current!;
 
       shopMarkersRef.current.forEach((m) => m.remove());

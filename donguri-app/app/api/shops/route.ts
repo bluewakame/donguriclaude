@@ -1,5 +1,4 @@
 // GET: 近くの加盟店一覧を取得
-export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { haversineDistance } from "@/lib/haversine";
@@ -31,6 +30,11 @@ export async function GET(request: NextRequest) {
     });
 
     // 位置情報が提供された場合、距離でフィルタリングしてソート
+    // 店舗データは頻繁に変わらないため60秒キャッシュ（CDN・ブラウザ共通）
+    const cacheHeaders = {
+      "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+    };
+
     if (latitude !== null && longitude !== null && !isNaN(latitude) && !isNaN(longitude)) {
       const shopsWithDistance = shops
         .map((shop) => ({
@@ -40,10 +44,10 @@ export async function GET(request: NextRequest) {
         .filter((shop) => shop.distance <= radius)
         .sort((a, b) => a.distance - b.distance);
 
-      return NextResponse.json({ ok: true, data: shopsWithDistance });
+      return NextResponse.json({ ok: true, data: shopsWithDistance }, { headers: cacheHeaders });
     }
 
-    return NextResponse.json({ ok: true, data: shops });
+    return NextResponse.json({ ok: true, data: shops }, { headers: cacheHeaders });
   } catch (error) {
     console.error("加盟店一覧取得エラー:", error);
     return NextResponse.json({ ok: false, message: "サーバーエラーが発生しました" }, { status: 500 });
