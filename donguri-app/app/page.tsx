@@ -54,7 +54,7 @@ export default function LandingPage() {
         >
           ログイン
         </Link>
-        <p className="text-center text-xs text-gray-400">どんぐり © 2024</p>
+        <p className="text-center text-xs text-gray-400">どんぐり</p>
       </div>
     </main>
   );
