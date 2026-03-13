@@ -3,22 +3,23 @@ import "leaflet/dist/leaflet.css";
 // Leaflet + OpenStreetMap コンポーネント（葉っぱスポーン機能付き）
 import { useEffect, useRef, useState, useCallback } from "react";
 
+import type * as LeafletType from "leaflet";
+
 // Leafletモジュールをモジュールスコープでキャッシュ（再インポートを防ぐ）
-let leafletPromise: Promise<typeof import("leaflet").default> | null = null;
-function getLeaflet(): Promise<typeof import("leaflet").default> {
+let leafletPromise: Promise<typeof LeafletType> | null = null;
+function getLeaflet(): Promise<typeof LeafletType> {
   if (!leafletPromise) {
     leafletPromise = import("leaflet").then((mod) => {
-      const L = mod.default;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      delete (L.Icon.Default.prototype as any)._getIconUrl;
-      L.Icon.Default.mergeOptions({
+      delete (mod.Icon.Default.prototype as any)._getIconUrl;
+      mod.Icon.Default.mergeOptions({
         iconRetinaUrl:
           "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
         iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
         shadowUrl:
           "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
       });
-      return L;
+      return mod;
     });
   }
   return leafletPromise;
