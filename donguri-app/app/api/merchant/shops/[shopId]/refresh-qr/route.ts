@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { generateQrToken, getQrExpiry } from "@/lib/qrcode";
+import { refreshQrToken } from "@/lib/qrcode";
 
 export async function POST(
   _request: NextRequest,
@@ -34,20 +34,11 @@ export async function POST(
       return NextResponse.json({ ok: false, message: "承認済みの店舗のみQRコードを更新できます" }, { status: 400 });
     }
 
-    const newToken = generateQrToken();
-    const newExpiry = getQrExpiry();
-
-    await prisma.shop.update({
-      where: { id: shopId },
-      data: { qrCodeToken: newToken, qrExpiresAt: newExpiry },
-    });
+    const { qrCodeToken, qrExpiresAt } = await refreshQrToken(shopId);
 
     return NextResponse.json({
       ok: true,
-      data: {
-        qrCodeToken: newToken,
-        qrExpiresAt: newExpiry,
-      },
+      data: { qrCodeToken, qrExpiresAt },
     });
   } catch (error) {
     console.error("QRコード更新エラー:", error);
