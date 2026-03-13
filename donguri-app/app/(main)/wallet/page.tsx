@@ -10,27 +10,28 @@ import Link from "next/link";
 export default async function WalletPage() {
   const session = await auth();
 
-  const user = await prisma.user.findUnique({
-    where: { id: session!.user!.id! },
-    select: {
-      acornBalance: true,
-      leafBalance: true,
-      goldenAcornBalance: true,
-      lastBoiledAt: true,
-    },
-  });
-
-  // 3日以内に期限が切れるどんぐりを取得
+  // 2つのDBクエリを並列実行してレスポンスを高速化
   const threeDaysFromNow = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
-  const expiringAcorns = await prisma.acornExpiry.findMany({
-    where: {
-      userId: session!.user!.id!,
-      isExpired: false,
-      expiresAt: { lte: threeDaysFromNow },
-    },
-    orderBy: { expiresAt: "asc" },
-    take: 5,
-  });
+  const [user, expiringAcorns] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: session!.user!.id! },
+      select: {
+        acornBalance: true,
+        leafBalance: true,
+        goldenAcornBalance: true,
+        lastBoiledAt: true,
+      },
+    }),
+    prisma.acornExpiry.findMany({
+      where: {
+        userId: session!.user!.id!,
+        isExpired: false,
+        expiresAt: { lte: threeDaysFromNow },
+      },
+      orderBy: { expiresAt: "asc" },
+      take: 5,
+    }),
+  ]);
 
   const acorns = user?.acornBalance ?? 0;
   const leaves = user?.leafBalance ?? 0;
