@@ -135,6 +135,16 @@ export default function SettingsPage() {
       {/* メニューリスト */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-4">
         <a
+          href="/history"
+          className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 border-b border-gray-100 transition-colors"
+        >
+          <span className="flex items-center gap-3">
+            <span>📋</span>
+            <span className="text-gray-700">来店・取引履歴</span>
+          </span>
+          <span className="text-gray-400">›</span>
+        </a>
+        <a
           href="/shops"
           className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 border-b border-gray-100 transition-colors"
         >
