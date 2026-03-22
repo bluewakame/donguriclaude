@@ -205,6 +205,8 @@ export default function Map() {
         }
       },
       () => {
+        // 位置情報取得に失敗した場合、東京をデフォルトに設定
+        setUserLocation({ lat: 35.6812, lng: 139.7671 });
         fetchNearbyShops(35.6812, 139.7671);
       },
       // enableHighAccuracy: false で省電力かつ高速な位置取得
@@ -215,16 +217,15 @@ export default function Map() {
     return () => navigator.geolocation.clearWatch(watchId);
   }, [spawnLeaves]);
 
-  // Leaflet マップを初期化
+  // Leaflet マップを初期化（現在位置取得後に初期化する）
   useEffect(() => {
-    if (!mapRef.current || mapInstanceRef.current) return;
+    if (!mapRef.current || mapInstanceRef.current || !userLocation) return;
 
     const initMap = async () => {
       const L = await getLeaflet();
 
-      const center = userLocation ?? { lat: 35.6812, lng: 139.7671 };
       const map = L.map(mapRef.current!, {
-        center: [center.lat, center.lng],
+        center: [userLocation.lat, userLocation.lng],
         zoom: 15,
         zoomControl: true,
       });
@@ -246,8 +247,9 @@ export default function Map() {
         mapInstanceRef.current = null;
       }
     };
+    // 初回の位置取得時のみマップを初期化
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [userLocation]);
 
   // ユーザー位置マーカーを更新
   useEffect(() => {
@@ -315,6 +317,15 @@ export default function Map() {
 
   return (
     <div className="relative w-full h-full">
+      {/* 位置情報取得中の表示 */}
+      {!userLocation && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+          <div className="text-center">
+            <p className="text-3xl mb-3">📍</p>
+            <p className="text-gray-500 text-sm font-medium">現在地を取得中...</p>
+          </div>
+        </div>
+      )}
       {/* 地図 */}
       {/* isolation: isolateでLeafletのz-indexをこのdiv内に封じ込める */}
       <div ref={mapRef} className="w-full h-full" style={{ isolation: "isolate" }} />

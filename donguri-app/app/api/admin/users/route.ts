@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,16 +17,22 @@ export async function GET(request: NextRequest) {
     const roleFilter = searchParams.get("role");
     const search = searchParams.get("search");
 
-    const where: Record<string, unknown> = {};
+    const conditions: Prisma.UserWhereInput[] = [];
     if (roleFilter) {
-      where.role = roleFilter;
+      conditions.push({ role: roleFilter });
     }
     if (search) {
-      where.OR = [
-        { displayName: { contains: search, mode: "insensitive" } },
-        { email: { contains: search, mode: "insensitive" } },
-      ];
+      conditions.push({
+        OR: [
+          { displayName: { contains: search, mode: "insensitive" } },
+          { email: { contains: search, mode: "insensitive" } },
+        ],
+      });
     }
+
+    const where: Prisma.UserWhereInput = conditions.length > 0
+      ? { AND: conditions }
+      : {};
 
     const users = await prisma.user.findMany({
       where,

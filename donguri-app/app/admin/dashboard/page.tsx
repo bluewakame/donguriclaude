@@ -7,7 +7,8 @@ import Link from "next/link";
 
 export default async function AdminDashboard() {
   const session = await auth();
-  if (!session?.user) {
+  const role = (session?.user as Record<string, unknown> | undefined)?.role as string | undefined;
+  if (!session?.user || role !== "admin") {
     redirect("/login");
   }
 
@@ -35,7 +36,9 @@ export default async function AdminDashboard() {
       {/* ヘッダー */}
       <header className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800">管理ダッシュボード</h1>
-        <p className="text-gray-500">どんぐりアプリの運営管理</p>
+        <p className="text-gray-500">
+          {session.user.name ?? session.user.email} でログイン中
+        </p>
       </header>
 
       {/* 統計カード */}
