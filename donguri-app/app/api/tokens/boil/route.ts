@@ -26,7 +26,11 @@ export async function POST() {
       newExpiresAt: newExpiresAt.toISOString(),
       message: `${resetCount}個のどんぐりをゆでました！有効期限が7日間延長されました`,
     });
-  } catch (error) {
+  } catch (error: unknown) {
+    const e = error as { code?: string; message?: string };
+    if (e.code === "COOLDOWN") {
+      return NextResponse.json({ ok: false, message: e.message }, { status: 429 });
+    }
     console.error("どんぐりをゆでるエラー:", error);
     return NextResponse.json({ ok: false, message: "サーバーエラーが発生しました" }, { status: 500 });
   }

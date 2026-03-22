@@ -1,7 +1,11 @@
 // 葉っぱ収集API（マップ上で葉っぱを拾う）
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+
+// 1日あたりの葉っぱ収集上限
+const DAILY_LEAF_COLLECT_LIMIT = 50;
 
 // 葉っぱの種類と重み（donguri準拠）
 const LEAF_TYPES = [
@@ -29,29 +33,69 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { leafId, latitude, longitude } = body;
 
-  if (!leafId) {
+  if (!leafId || typeof leafId !== "string") {
     return NextResponse.json({ ok: false, error: "leafId が必要です" }, { status: 400 });
   }
 
   const userId = session.user.id;
+
+  // 1日あたりの収集数をチェック
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const todayCollections = await prisma.leafCollection.count({
+    where: {
+      userId,
+      collectedAt: { gte: today },
+    },
+  });
+
+  if (todayCollections >= DAILY_LEAF_COLLECT_LIMIT) {
+    return NextResponse.json({
+      ok: false,
+      error: `本日の葉っぱ収集上限（${DAILY_LEAF_COLLECT_LIMIT}回）に達しました`,
+    }, { status: 429 });
+  }
+
   const leaf = drawLeafType();
 
-  await prisma.$transaction(async (tx) => {
-    await tx.user.update({
-      where: { id: userId },
-      data: { leafBalance: { increment: leaf.value } },
-    });
+  try {
+    await prisma.$transaction(async (tx) => {
+      // leafId の重複チェック（ユニーク制約で二重収集を防止）
+      await tx.leafCollection.create({
+        data: {
+          id: crypto.randomUUID(),
+          userId,
+          leafId,
+        },
+      });
 
-    await tx.tokenTransaction.create({
-      data: {
-        userId,
-        type: "earn",
-        amount: leaf.value,
-        tokenType: "leaf",
-        note: `マップ探索: ${leaf.emoji} ${leaf.label}を拾った${latitude && longitude ? `（緯度: ${latitude.toFixed(4)}, 経度: ${longitude.toFixed(4)}）` : ""}`,
-      },
+      await tx.user.update({
+        where: { id: userId },
+        data: { leafBalance: { increment: leaf.value } },
+      });
+
+      await tx.tokenTransaction.create({
+        data: {
+          userId,
+          type: "earn",
+          amount: leaf.value,
+          tokenType: "leaf",
+          note: `マップ探索: ${leaf.emoji} ${leaf.label}を拾った${latitude && longitude ? `（緯度: ${Number(latitude).toFixed(4)}, 経度: ${Number(longitude).toFixed(4)}）` : ""}`,
+        },
+      });
     });
-  });
+  } catch (error: unknown) {
+    // ユニーク制約違反 = 既に収集済み
+    const e = error as { code?: string };
+    if (e.code === "P2002") {
+      return NextResponse.json({
+        ok: false,
+        error: "この葉っぱはすでに収集済みです",
+      }, { status: 409 });
+    }
+    throw error;
+  }
 
   return NextResponse.json({
     ok: true,

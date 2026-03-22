@@ -8,11 +8,13 @@ datasource db {
 }
 
 // ユーザー
+// role: "user"(一般) / "merchant"(加盟店オーナー) / "admin"(管理者)
 model User {
   id                  String    @id @default(uuid())
   email               String    @unique
   displayName         String
   passwordHash        String?
+  role                String    @default("user")
   acornBalance        Int       @default(0)
   leafBalance         Int       @default(0)
   goldenAcornBalance  Int       @default(0)
@@ -26,6 +28,7 @@ model User {
   accounts            Account[]
   sessions            Session[]
   shops               Shop[]
+  leafCollections     LeafCollection[]
 }
 
 // NextAuth.js 用アカウント（Googleログイン等）
@@ -96,12 +99,15 @@ model VisitLog {
   id           String   @id @default(uuid())
   userId       String
   shopId       String
+  visitDate    String   // "YYYY-MM-DD" 形式。同日来店の重複防止用
   visitedAt    DateTime @default(now())
   acornEarned  Int
   isGolden     Boolean  @default(false)
 
   user         User     @relation(fields: [userId], references: [id])
   shop         Shop     @relation(fields: [shopId], references: [id])
+
+  @@unique([userId, shopId, visitDate])
 }
 
 // トークン取引履歴
@@ -129,4 +135,16 @@ model AcornExpiry {
   isExpired  Boolean  @default(false)
 
   user       User     @relation(fields: [userId], references: [id])
+}
+
+// 葉っぱ収集記録（二重収集防止用）
+model LeafCollection {
+  id          String   @id @default(uuid())
+  userId      String
+  leafId      String
+  collectedAt DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, leafId])
 }
