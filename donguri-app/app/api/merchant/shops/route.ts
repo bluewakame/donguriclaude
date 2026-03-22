@@ -12,6 +12,11 @@ export async function GET() {
       return NextResponse.json({ ok: false, message: "ログインが必要です" }, { status: 401 });
     }
 
+    const role = (session.user as Record<string, unknown>).role as string | undefined;
+    if (role !== "merchant" && role !== "admin") {
+      return NextResponse.json({ ok: false, message: "加盟店オーナー権限が必要です" }, { status: 403 });
+    }
+
     const shops = await prisma.shop.findMany({
       where: { createdBy: session.user.id },
       orderBy: { createdAt: "desc" },
@@ -29,6 +34,11 @@ export async function POST(request: NextRequest) {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ ok: false, message: "ログインが必要です" }, { status: 401 });
+    }
+
+    const role = (session.user as Record<string, unknown>).role as string | undefined;
+    if (role !== "merchant" && role !== "admin") {
+      return NextResponse.json({ ok: false, message: "加盟店オーナー権限が必要です" }, { status: 403 });
     }
 
     const body = await request.json();

@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { shopId, qrToken } = body;
+    const { shopId, qrToken, latitude, longitude } = body;
 
     // バリデーション
     if (!shopId || typeof shopId !== "string") {
@@ -22,25 +22,6 @@ export async function POST(request: NextRequest) {
     }
     if (!qrToken || typeof qrToken !== "string") {
       return NextResponse.json({ ok: false, message: "QRトークンが無効です" }, { status: 400 });
-    }
-
-    // 同じ店に同日来店済みか確認（1日1回制限）
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const alreadyVisitedToday = await prisma.visitLog.findFirst({
-      where: {
-        userId: session.user.id,
-        shopId,
-        visitedAt: { gte: today },
-      },
-    });
-
-    if (alreadyVisitedToday) {
-      return NextResponse.json({
-        ok: false,
-        message: "本日はすでにこの店舗でどんぐりを獲得済みです（1日1回まで）",
-      });
     }
 
     // QRトークンを検証
@@ -55,11 +36,41 @@ export async function POST(request: NextRequest) {
 
     const { shop } = verification;
 
+    // 位置情報が提供されている場合はサーバー側で検証 (#7)
+    if (typeof latitude === "number" && typeof longitude === "number") {
+      const fullShop = await prisma.shop.findUnique({
+        where: { id: shopId },
+        select: { latitude: true, longitude: true, radiusMeters: true },
+      });
+      if (fullShop) {
+        const { haversineDistance } = await import("@/lib/haversine");
+        const distance = haversineDistance(latitude, longitude, fullShop.latitude, fullShop.longitude);
+        if (distance > fullShop.radiusMeters) {
+          return NextResponse.json({
+            ok: false,
+            message: `店舗の近くにいません（現在地と店舗の距離: ${Math.round(distance)}m）`,
+          });
+        }
+      }
+    }
+
     // 金のどんぐりの抽選（サーバー側でのみ実行）
     const isGolden = drawGoldenAcorn(shop.goldenProbability);
 
-    // どんぐりを付与
-    await awardAcorns(session.user.id, shopId, shop.acornAmount, isGolden);
+    // どんぐりを付与（トランザクション内で同日チェック + 付与を一括処理）
+    // VisitLog のユニーク制約 [userId, shopId, visitDate] で二重来店を防止
+    try {
+      await awardAcorns(session.user.id, shopId, shop.acornAmount, isGolden);
+    } catch (error: unknown) {
+      const e = error as { code?: string };
+      if (e.code === "P2002") {
+        return NextResponse.json({
+          ok: false,
+          message: "本日はすでにこの店舗でどんぐりを獲得済みです（1日1回まで）",
+        });
+      }
+      throw error;
+    }
 
     // 最新の残高を取得
     const updatedUser = await prisma.user.findUnique({

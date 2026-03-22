@@ -4,12 +4,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
-
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session?.user?.email || !ADMIN_EMAILS.includes(session.user.email)) {
+    const role = (session?.user as Record<string, unknown> | undefined)?.role as string | undefined;
+    if (!session?.user?.id || role !== "admin") {
       return NextResponse.json({ ok: false, message: "管理者権限が必要です" }, { status: 403 });
     }
 

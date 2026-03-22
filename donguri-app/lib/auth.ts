@@ -58,17 +58,34 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    // JWTにユーザーIDを追加
-    async jwt({ token, user }) {
+    // JWTにユーザーIDとロールを追加
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id;
+        // 初回ログイン時にDBからロールを取得
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { role: true },
+        });
+        token.role = dbUser?.role ?? "user";
+      }
+      // セッション更新時にもロールを再取得（ロール変更を反映）
+      if (trigger === "update" && token.id) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { role: true },
+        });
+        token.role = dbUser?.role ?? "user";
       }
       return token;
     },
-    // セッションにユーザーIDを追加
+    // セッションにユーザーIDとロールを追加
     async session({ session, token }) {
       if (token?.id) {
         session.user.id = token.id as string;
+      }
+      if (token?.role) {
+        (session.user as Record<string, unknown>).role = token.role as string;
       }
       return session;
     },

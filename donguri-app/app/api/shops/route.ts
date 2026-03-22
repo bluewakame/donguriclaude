@@ -14,8 +14,9 @@ export async function GET(request: NextRequest) {
     const longitude = lngParam ? parseFloat(lngParam) : null;
     const radius = parseFloat(radiusParam);
 
-    // すべての加盟店を取得
+    // 承認済みの加盟店のみ取得
     const shops = await prisma.shop.findMany({
+      where: { status: "approved" },
       select: {
         id: true,
         name: true,

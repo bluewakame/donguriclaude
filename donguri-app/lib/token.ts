@@ -19,7 +19,8 @@ export function drawGoldenAcorn(probability: number): boolean {
 }
 
 /**
- * どんぐりをユーザーに付与する
+ * どんぐりをユーザーに付与する（同日来店チェック含む）
+ * visitDate のユニーク制約により、同一ユーザー・店舗・日の二重付与を防止
  * @param userId ユーザーID
  * @param shopId 店舗ID
  * @param acornAmount 通常どんぐりの付与数
@@ -33,6 +34,7 @@ export async function awardAcorns(
 ): Promise<void> {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + ACORN_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+  const visitDate = now.toISOString().slice(0, 10); // "YYYY-MM-DD"
 
   await prisma.$transaction(async (tx) => {
     // ユーザーの残高を更新
@@ -48,11 +50,12 @@ export async function awardAcorns(
       });
     }
 
-    // 来店履歴を記録
+    // 来店履歴を記録（ユニーク制約で同日二重来店を防止）
     await tx.visitLog.create({
       data: {
         userId,
         shopId,
+        visitDate,
         acornEarned: isGolden ? 0 : acornAmount,
         isGolden,
       },
@@ -88,6 +91,9 @@ export async function awardAcorns(
  * @param userId ユーザーID
  * @returns ゆでたどんぐりの数と新しい有効期限
  */
+// ゆでるクールダウン（時間）
+const BOIL_COOLDOWN_HOURS = 24;
+
 export async function boilAcorns(
   userId: string
 ): Promise<{ resetCount: number; newExpiresAt: Date }> {
@@ -97,6 +103,23 @@ export async function boilAcorns(
   let totalAmount = 0;
 
   await prisma.$transaction(async (tx) => {
+    // クールダウンチェック
+    const user = await tx.user.findUnique({
+      where: { id: userId },
+      select: { lastBoiledAt: true },
+    });
+    if (user?.lastBoiledAt) {
+      const cooldownEnd = new Date(user.lastBoiledAt.getTime() + BOIL_COOLDOWN_HOURS * 60 * 60 * 1000);
+      if (now < cooldownEnd) {
+        const remainingMs = cooldownEnd.getTime() - now.getTime();
+        const remainingHours = Math.ceil(remainingMs / (60 * 60 * 1000));
+        throw Object.assign(
+          new Error(`ゆでるのはまだできません（あと約${remainingHours}時間）`),
+          { code: "COOLDOWN" }
+        );
+      }
+    }
+
     // 期限切れでないどんぐり（ゆでる対象）をトランザクション内で取得
     const validExpiries = await tx.acornExpiry.findMany({
       where: { userId, isExpired: false },
@@ -248,11 +271,19 @@ export async function expireAcorns(): Promise<number> {
         data: { isExpired: true },
       });
 
-      // ユーザーの残高から減算（0未満にはならないようガード）
-      await tx.user.update({
+      // ユーザーの現在残高を取得し、0未満にならないよう実際の減算額を計算
+      const user = await tx.user.findUnique({
         where: { id: entry.userId },
-        data: { acornBalance: { decrement: entry.amount } },
+        select: { acornBalance: true },
       });
+      const actualDecrement = Math.min(entry.amount, user?.acornBalance ?? 0);
+
+      if (actualDecrement > 0) {
+        await tx.user.update({
+          where: { id: entry.userId },
+          data: { acornBalance: { decrement: actualDecrement } },
+        });
+      }
 
       // 取引履歴を記録
       await tx.tokenTransaction.create({
@@ -261,7 +292,7 @@ export async function expireAcorns(): Promise<number> {
           type: "expire",
           amount: entry.amount,
           tokenType: "acorn",
-          note: "有効期限切れにより消滅",
+          note: `有効期限切れにより消滅${actualDecrement < entry.amount ? `（残高調整: ${entry.amount} → ${actualDecrement}）` : ""}`,
         },
       });
 
