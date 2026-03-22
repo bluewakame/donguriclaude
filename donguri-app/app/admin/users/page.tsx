@@ -33,12 +33,13 @@ export default function AdminUsersPage() {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<{ userId: string; newRole: string } | null>(null);
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (searchQuery?: string) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       if (roleFilter) params.set("role", roleFilter);
-      if (search) params.set("search", search);
+      const q = searchQuery ?? search;
+      if (q) params.set("search", q);
       const res = await fetch(`/api/admin/users?${params}`);
       const data = await res.json();
       if (data.ok) {
@@ -46,7 +47,11 @@ export default function AdminUsersPage() {
         if (data.currentUserId) {
           setCurrentUserId(data.currentUserId);
         }
+      } else {
+        setMessage({ type: "error", text: data.message ?? "データの取得に失敗しました" });
       }
+    } catch {
+      setMessage({ type: "error", text: "通信エラーが発生しました" });
     } finally {
       setLoading(false);
     }
@@ -54,11 +59,12 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roleFilter]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchUsers();
+    fetchUsers(search);
   };
 
   const handleRoleChange = async (userId: string, newRole: string) => {
