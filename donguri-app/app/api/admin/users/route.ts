@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ ok: true, data: users });
+    return NextResponse.json({ ok: true, data: users, currentUserId: session.user.id });
   } catch (error) {
     console.error("ユーザー一覧取得エラー:", error);
     return NextResponse.json({ ok: false, message: "サーバーエラーが発生しました" }, { status: 500 });
