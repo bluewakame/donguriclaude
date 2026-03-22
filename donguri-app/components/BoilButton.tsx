@@ -25,6 +25,11 @@ export default function BoilButton({ currentBalance }: BoilButtonProps) {
 
     try {
       const res = await fetch("/api/tokens/boil", { method: "POST" });
+      if (res.status === 401) {
+        // セッション切れの場合はログインページへ
+        router.push("/login");
+        return;
+      }
       const data = await res.json();
       setResult(data);
       // ゆで成功後にサーバーデータを再取得（有効期限・最終ゆで日時を更新）
