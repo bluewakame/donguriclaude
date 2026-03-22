@@ -1,9 +1,8 @@
 // Next.js Middleware: 認証チェックの共通化
-// 認証が不要な公開ルートを明示的にホワイトリスト管理し、
-// 新規APIルート追加時の認証チェック漏れを防止する
+// NextAuth v5 の auth() を使用してJWTを検証する。
+// getToken (next-auth/jwt) はv5で互換性がないため使用しない。
+import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
 
 // 認証不要な公開パス
 const PUBLIC_PATHS = [
@@ -12,14 +11,11 @@ const PUBLIC_PATHS = [
   "/api/cron",        // cron（独自の認証あり）
 ];
 
-// 静的アセット・ページは対象外
-const API_PREFIX = "/api/";
-
-export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+export default auth((req) => {
+  const { pathname } = req.nextUrl;
 
   // API ルート以外はスキップ
-  if (!pathname.startsWith(API_PREFIX)) {
+  if (!pathname.startsWith("/api/")) {
     return NextResponse.next();
   }
 
@@ -30,9 +26,8 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // JWT トークンの存在を検証
-  const token = await getToken({ req: request });
-  if (!token) {
+  // auth() が注入した認証情報を確認
+  if (!req.auth) {
     return NextResponse.json(
       { ok: false, message: "ログインが必要です" },
       { status: 401 }
@@ -40,7 +35,7 @@ export async function middleware(request: NextRequest) {
   }
 
   return NextResponse.next();
-}
+});
 
 export const config = {
   // API ルートのみに適用
