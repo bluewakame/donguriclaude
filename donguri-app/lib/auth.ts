@@ -59,24 +59,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     // JWTにユーザーIDとロールを追加
+    // 注意: このコールバックはミドルウェア（Edge Runtime）でも実行されるため
+    // Prisma等のNode.js専用モジュールは使用できない
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
-      }
-      // 毎回DBからロールを再取得（管理画面でのロール変更を即座に反映するため）
-      if (token.id) {
+        // 初回ログイン時にDBからロールを取得（authorize内はNode.js Runtime）
         const dbUser = await prisma.user.findUnique({
-          where: { id: token.id as string },
+          where: { id: user.id },
           select: { role: true },
         });
         token.role = dbUser?.role ?? "user";
       }
+      // token.sub はNextAuthが自動的にユーザーIDを設定する
       return token;
     },
     // セッションにユーザーIDとロールを追加
     async session({ session, token }) {
-      if (token?.id) {
-        session.user.id = token.id as string;
+      // token.sub はNextAuth v5が自動設定するユーザーID
+      if (token?.sub) {
+        session.user.id = token.sub;
       }
       if (token?.role) {
         (session.user as unknown as Record<string, unknown>).role = token.role as string;
