@@ -58,8 +58,8 @@ export default async function AdminDashboard() {
         </div>
       </div>
 
-      {/* 加盟店審査リンク */}
-      <div className="mb-6">
+      {/* 管理メニュー */}
+      <div className="space-y-3 mb-6">
         <Link
           href="/admin/shops"
           className="flex items-center justify-between bg-white rounded-xl border border-amber-200 p-4 hover:bg-amber-50 transition-colors"
@@ -81,6 +81,16 @@ export default async function AdminDashboard() {
               "→"
             )}
           </span>
+        </Link>
+        <Link
+          href="/admin/users"
+          className="flex items-center justify-between bg-white rounded-xl border border-purple-200 p-4 hover:bg-purple-50 transition-colors"
+        >
+          <div>
+            <p className="font-bold text-gray-800">ユーザー管理</p>
+            <p className="text-sm text-gray-500">ユーザーのロール変更・一覧管理</p>
+          </div>
+          <span className="text-2xl">→</span>
         </Link>
       </div>
 
