@@ -25,6 +25,7 @@ const ROLE_COLOR: Record<string, string> = {
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [roleFilter, setRoleFilter] = useState<string>("");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
@@ -42,6 +43,9 @@ export default function AdminUsersPage() {
       const data = await res.json();
       if (data.ok) {
         setUsers(data.data);
+        if (data.currentUserId) {
+          setCurrentUserId(data.currentUserId);
+        }
       }
     } finally {
       setLoading(false);
@@ -175,40 +179,52 @@ export default function AdminUsersPage() {
         <p className="text-gray-400 text-center py-12">該当するユーザーはいません</p>
       ) : (
         <div className="space-y-3">
-          {users.map((user) => (
-            <div key={user.id} className="bg-white rounded-xl border border-gray-200 p-4">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="font-bold text-gray-800 truncate">
-                      {user.displayName ?? "（未設定）"}
+          {users.map((user) => {
+            const isSelf = user.id === currentUserId;
+            return (
+              <div key={user.id} className={`bg-white rounded-xl border p-4 ${isSelf ? "border-purple-300 ring-1 ring-purple-200" : "border-gray-200"}`}>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-bold text-gray-800 truncate">
+                        {user.displayName ?? "（未設定）"}
+                      </p>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_COLOR[user.role]}`}>
+                        {ROLE_LABEL[user.role] ?? user.role}
+                      </span>
+                      {isSelf && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                          自分
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-500 truncate">{user.email}</p>
+                    <p className="text-xs text-gray-400">
+                      残高: {user.acornBalance} どんぐり / 登録: {new Date(user.createdAt).toLocaleDateString("ja-JP")}
                     </p>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_COLOR[user.role]}`}>
-                      {ROLE_LABEL[user.role] ?? user.role}
-                    </span>
                   </div>
-                  <p className="text-sm text-gray-500 truncate">{user.email}</p>
-                  <p className="text-xs text-gray-400">
-                    残高: {user.acornBalance} どんぐり / 登録: {new Date(user.createdAt).toLocaleDateString("ja-JP")}
-                  </p>
-                </div>
-                <div className="shrink-0">
-                  <select
-                    value={user.role}
-                    onChange={(e) =>
-                      setConfirmTarget({ userId: user.id, newRole: e.target.value })
-                    }
-                    disabled={processing === user.id}
-                    className="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50"
-                  >
-                    <option value="user">一般ユーザー</option>
-                    <option value="merchant">加盟店</option>
-                    <option value="admin">管理者</option>
-                  </select>
+                  <div className="shrink-0">
+                    {isSelf ? (
+                      <span className="text-xs text-gray-400">変更不可</span>
+                    ) : (
+                      <select
+                        value={user.role}
+                        onChange={(e) =>
+                          setConfirmTarget({ userId: user.id, newRole: e.target.value })
+                        }
+                        disabled={processing === user.id}
+                        className="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50"
+                      >
+                        <option value="user">一般ユーザー</option>
+                        <option value="merchant">加盟店</option>
+                        <option value="admin">管理者</option>
+                      </select>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
