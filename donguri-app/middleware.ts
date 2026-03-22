@@ -1,6 +1,6 @@
 // Next.js Middleware: 認証チェックの共通化
 // NextAuth v5 の auth() を使用してJWTを検証する。
-// getToken (next-auth/jwt) はv5でクッキー名やシークレットの扱いが異なるため使用しない。
+// getToken (next-auth/jwt) はv5で互換性がないため使用しない。
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
