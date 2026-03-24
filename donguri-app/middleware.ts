@@ -1,7 +1,11 @@
 // Next.js Middleware: 認証チェック + セキュリティヘッダーの共通化
 // NextAuth v5 の auth() を使用してJWTを検証する。
-import { auth } from "@/lib/auth";
+// Edge Runtime で動作するため、bcryptjs/prisma を含まない auth.config を使用
+import NextAuth from "next-auth";
+import { authConfig } from "@/lib/auth.config";
 import { NextResponse } from "next/server";
+
+const { auth } = NextAuth(authConfig);
 
 // 認証不要な公開パス
 const PUBLIC_PATHS = [
