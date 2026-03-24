@@ -9,9 +9,7 @@ function getLeaflet(): Promise<typeof import("leaflet")> {
   if (!leafletPromise) {
     leafletPromise = import("leaflet").then((mod) => {
       // @types/leaflet は export = L 形式のため mod 自体が L namespace
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const L = (mod as any).default ?? mod;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (L.Icon.Default.prototype as any)._getIconUrl;
       L.Icon.Default.mergeOptions({
         iconRetinaUrl:
