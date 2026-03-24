@@ -1,6 +1,7 @@
 // 葉っぱ収集API（マップ上で葉っぱを拾う）
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -39,9 +40,9 @@ export async function POST(req: NextRequest) {
 
   const userId = session.user.id;
 
-  // 1日あたりの収集数をチェック
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // 1日あたりの収集数をチェック（JST基準）
+  const nowJst = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" });
+  const today = new Date(nowJst + "T00:00:00+09:00");
 
   const todayCollections = await prisma.leafCollection.count({
     where: {
@@ -84,7 +85,7 @@ export async function POST(req: NextRequest) {
           note: `マップ探索: ${leaf.emoji} ${leaf.label}を拾った${latitude && longitude ? `（緯度: ${Number(latitude).toFixed(4)}, 経度: ${Number(longitude).toFixed(4)}）` : ""}`,
         },
       });
-    });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   } catch (error: unknown) {
     // ユニーク制約違反 = 既に収集済み
     const e = error as { code?: string };

@@ -1,6 +1,7 @@
 // 金のどんぐりショップ — アイテム購入API
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -101,7 +102,7 @@ export async function POST(req: NextRequest) {
               note: "ショップ: どんぐりブースト（+5個）",
             },
           });
-        });
+        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
       } catch (err: unknown) {
         const resp = handleBusinessError(err);
         if (resp) return resp;
@@ -139,7 +140,7 @@ export async function POST(req: NextRequest) {
               note: "ショップ: 葉っぱ袋（+10枚）",
             },
           });
-        });
+        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
       } catch (err: unknown) {
         const resp = handleBusinessError(err);
         if (resp) return resp;
@@ -177,7 +178,7 @@ export async function POST(req: NextRequest) {
               note: `ショップ: シールド購入（有効期限+${shieldHours}時間）`,
             },
           });
-        });
+        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
       } catch (err: unknown) {
         const resp = handleBusinessError(err);
         if (resp) return resp;

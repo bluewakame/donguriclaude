@@ -23,9 +23,9 @@ export async function GET(request: NextRequest) {
         address: true,
         latitude: true,
         longitude: true,
-        radiusMeters: true,
         isPremium: true,
         acornAmount: true,
+        // radiusMeters は意図的に除外（位置偽装に利用されるリスクがあるため）
       },
       orderBy: { isPremium: "desc" },
     });
