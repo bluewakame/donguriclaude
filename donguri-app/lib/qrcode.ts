@@ -12,10 +12,11 @@ export function generateQrToken(): string {
 }
 
 /**
- * QRコードの有効期限（現在時刻から1時間後）を返す
+ * QRコードの有効期限（現在時刻から10分後）を返す
+ * QRコード共有・転送攻撃を防止するため短い有効期限を設定
  */
 export function getQrExpiry(): Date {
-  return new Date(Date.now() + 60 * 60 * 1000); // 1時間後
+  return new Date(Date.now() + 10 * 60 * 1000); // 10分後
 }
 
 /**

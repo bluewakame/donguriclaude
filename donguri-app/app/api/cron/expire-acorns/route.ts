@@ -1,8 +1,19 @@
 // 毎日深夜0時に実行されるcronジョブ: 期限切れどんぐりを消滅させる
 // Vercelのcron設定（vercel.json）から呼び出される
 export const dynamic = 'force-dynamic';
+import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { expireAcorns } from "@/lib/token";
+
+/** タイミング攻撃を防止する定数時間文字列比較 */
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    // 長さが異なる場合もダミー比較を実行して時間差を抑える
+    crypto.timingSafeEqual(Buffer.from(a), Buffer.from(a));
+    return false;
+  }
+  return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,7 +25,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
     const authHeader = request.headers.get("authorization");
-    if (authHeader !== `Bearer ${cronSecret}`) {
+    const expectedHeader = `Bearer ${cronSecret}`;
+    if (!authHeader || !timingSafeEqual(authHeader, expectedHeader)) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 

@@ -59,6 +59,8 @@ export async function POST(request: NextRequest) {
     const qrCodeToken = generateQrToken();
     const qrExpiresAt = getQrExpiry();
 
+    // セキュリティ: acornAmount, goldenProbability, radiusMeters は
+    // merchant が指定できない（admin のみ変更可能）。デフォルト値を使用する。
     const shop = await prisma.shop.create({
       data: {
         name: name.trim(),

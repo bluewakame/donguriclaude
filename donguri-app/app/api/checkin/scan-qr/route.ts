@@ -24,6 +24,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, message: "QRトークンが無効です" }, { status: 400 });
     }
 
+    // 位置情報は必須（位置偽装防止のためサーバー側で必ず検証）
+    if (typeof latitude !== "number" || typeof longitude !== "number") {
+      return NextResponse.json({ ok: false, message: "位置情報が必要です。位置情報の利用を許可してください" }, { status: 400 });
+    }
+    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+      return NextResponse.json({ ok: false, message: "位置情報の値が範囲外です" }, { status: 400 });
+    }
+
     // QRトークンを検証
     const verification = await verifyQrToken(shopId, qrToken);
 
@@ -36,21 +44,19 @@ export async function POST(request: NextRequest) {
 
     const { shop } = verification;
 
-    // 位置情報が提供されている場合はサーバー側で検証 (#7)
-    if (typeof latitude === "number" && typeof longitude === "number") {
-      const fullShop = await prisma.shop.findUnique({
-        where: { id: shopId },
-        select: { latitude: true, longitude: true, radiusMeters: true },
-      });
-      if (fullShop) {
-        const { haversineDistance } = await import("@/lib/haversine");
-        const distance = haversineDistance(latitude, longitude, fullShop.latitude, fullShop.longitude);
-        if (distance > fullShop.radiusMeters) {
-          return NextResponse.json({
-            ok: false,
-            message: `店舗の近くにいません（現在地と店舗の距離: ${Math.round(distance)}m）`,
-          });
-        }
+    // サーバー側で位置情報を検証
+    const fullShop = await prisma.shop.findUnique({
+      where: { id: shopId },
+      select: { latitude: true, longitude: true, radiusMeters: true },
+    });
+    if (fullShop) {
+      const { haversineDistance } = await import("@/lib/haversine");
+      const distance = haversineDistance(latitude, longitude, fullShop.latitude, fullShop.longitude);
+      if (distance > fullShop.radiusMeters) {
+        return NextResponse.json({
+          ok: false,
+          message: `店舗の近くにいません（現在地と店舗の距離: ${Math.round(distance)}m）`,
+        });
       }
     }
 

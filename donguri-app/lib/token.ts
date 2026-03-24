@@ -1,9 +1,18 @@
 // トークン管理ロジック（どんぐり獲得・ゆでる・交換・消滅）
 
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 // どんぐりの有効期限（日数）
 const ACORN_EXPIRY_DAYS = 7;
+
+/**
+ * 日本標準時(JST)での日付文字列を返す
+ * visitDateのタイムゾーン不整合による二重チェックイン防止
+ */
+function getJstDateString(date: Date): string {
+  return date.toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" }); // "YYYY-MM-DD" 形式
+}
 
 // 葉っぱ→どんぐりの交換レート（葉っぱ10枚 = どんぐり1個）
 const LEAVES_PER_ACORN = 10;
@@ -34,7 +43,7 @@ export async function awardAcorns(
 ): Promise<void> {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + ACORN_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
-  const visitDate = now.toISOString().slice(0, 10); // "YYYY-MM-DD"
+  const visitDate = getJstDateString(now); // JST基準の "YYYY-MM-DD"
 
   await prisma.$transaction(async (tx) => {
     // ユーザーの残高を更新
@@ -82,7 +91,7 @@ export async function awardAcorns(
         },
       });
     }
-  });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
 /**
@@ -153,7 +162,7 @@ export async function boilAcorns(
         note: `${totalAmount}個のどんぐりをゆでた（有効期限を7日延長）`,
       },
     });
-  });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
   return { resetCount: totalAmount, newExpiresAt };
 }
@@ -231,7 +240,7 @@ export async function exchangeLeaves(
     });
 
     return updated;
-  });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
   return {
     leafSpent: leafAmount,
@@ -252,7 +261,7 @@ export async function expireAcorns(): Promise<number> {
   let totalExpired = 0;
 
   await prisma.$transaction(async (tx) => {
-    // トランザクション内で期限切れ対象を取得（isExpired: false を再確認）
+    // Serializable分離レベルで期限切れ対象を取得（isExpired: false を再確認）
     const expiredEntries = await tx.acornExpiry.findMany({
       where: {
         isExpired: false,
@@ -298,7 +307,7 @@ export async function expireAcorns(): Promise<number> {
 
       totalExpired += entry.amount;
     }
-  });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
   return totalExpired;
 }

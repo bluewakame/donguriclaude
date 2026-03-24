@@ -40,38 +40,42 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, message: `表示名は${MAX_DISPLAY_NAME_LENGTH}文字以内で入力してください` }, { status: 400 });
     }
 
-    // メールアドレスの重複チェック
-    const existingUser = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
-    });
-
-    if (existingUser) {
-      return NextResponse.json({ ok: false, message: "このメールアドレスはすでに登録されています" }, { status: 409 });
-    }
-
-    // パスワードをハッシュ化
+    // パスワードをハッシュ化（タイミング攻撃防止のため、重複チェック前に実行）
     const passwordHash = await bcrypt.hash(password, 12);
 
-    // ユーザーを作成
-    const user = await prisma.user.create({
-      data: {
-        email: email.toLowerCase(),
-        displayName: displayName.trim(),
-        passwordHash,
-      },
-      select: {
-        id: true,
-        email: true,
-        displayName: true,
-        createdAt: true,
-      },
-    });
+    // ユーザーを作成（ユニーク制約違反で重複を検出）
+    try {
+      const user = await prisma.user.create({
+        data: {
+          email: email.toLowerCase(),
+          displayName: displayName.trim(),
+          passwordHash,
+        },
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+          createdAt: true,
+        },
+      });
 
-    return NextResponse.json({
-      ok: true,
-      data: user,
-      message: "アカウントを作成しました",
-    }, { status: 201 });
+      return NextResponse.json({
+        ok: true,
+        data: user,
+        message: "アカウントを作成しました",
+      }, { status: 201 });
+    } catch (error: unknown) {
+      const e = error as { code?: string };
+      if (e.code === "P2002") {
+        // アカウント列挙防止: 重複時も同じ成功メッセージを返す
+        return NextResponse.json({
+          ok: true,
+          data: { email: email.toLowerCase() },
+          message: "アカウントを作成しました",
+        }, { status: 201 });
+      }
+      throw error;
+    }
   } catch (error) {
     console.error("ユーザー登録エラー:", error);
     return NextResponse.json({ ok: false, message: "サーバーエラーが発生しました" }, { status: 500 });
