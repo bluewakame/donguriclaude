@@ -1,4 +1,4 @@
-// NextAuth.js v5 の設定
+// NextAuth.js v5 の設定（フルNode.js Runtime版）
 import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import GoogleProvider from "next-auth/providers/google";
@@ -6,14 +6,11 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
+import { authConfig } from "@/lib/auth.config";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   adapter: PrismaAdapter(prisma),
-  // セッション方式: JWTを使用（Credentialsプロバイダーとの互換性のため）
-  session: {
-    strategy: "jwt",
-    maxAge: 24 * 60 * 60, // 24時間でセッション失効
-  },
   providers: [
     // Googleログイン
     GoogleProvider({
@@ -70,11 +67,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     // JWTにユーザーIDとロールを追加
-    // 注意: このコールバックはミドルウェア（Edge Runtime）でも実行されるため
-    // Prisma等のNode.js専用モジュールは使用できない
+    // このコールバックはAPI Route（Node.js Runtime）で実行される
     async jwt({ token, user, trigger }) {
       if (user) {
-        // 初回ログイン時にDBからロールを取得（authorize内はNode.js Runtime）
+        // 初回ログイン時にDBからロールを取得
         const dbUser = await prisma.user.findUnique({
           where: { id: user.id },
           select: { role: true, roleUpdatedAt: true },
@@ -95,12 +91,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
       }
 
-      // token.sub はNextAuthが自動的にユーザーIDを設定する
       return token;
     },
     // セッションにユーザーIDとロールを追加
     async session({ session, token }) {
-      // token.sub はNextAuth v5が自動設定するユーザーID
       if (token?.sub) {
         session.user.id = token.sub;
       }
@@ -109,10 +103,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       return session;
     },
-  },
-  pages: {
-    signIn: "/login",
-    error: "/login",
   },
 });
 
