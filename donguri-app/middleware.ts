@@ -1,11 +1,7 @@
 // Next.js Middleware: 認証チェック + セキュリティヘッダーの共通化
-// NextAuth v5 の auth() を使用してJWTを検証する。
-// Edge Runtime で動作するため、bcryptjs/prisma を含まない auth.config を使用
-import NextAuth from "next-auth";
-import { authConfig } from "./lib/auth.config";
+// Edge Runtime 互換のため、next-auth を直接インポートせず jose で JWT を検証する
 import { NextResponse } from "next/server";
-
-const { auth } = NextAuth(authConfig);
+import type { NextRequest } from "next/server";
 
 // 認証不要な公開パス
 const PUBLIC_PATHS = [
@@ -22,20 +18,16 @@ const ALLOWED_ORIGINS = [
 
 /** レスポンスにセキュリティヘッダーを追加 */
 function addSecurityHeaders(response: NextResponse): NextResponse {
-  // XSS防止
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("X-XSS-Protection", "1; mode=block");
-  // Referrer情報の漏洩を制限
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  // HTTPS強制（Vercel環境）
   response.headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
-  // Permissions-Policy: 不要なブラウザAPIを無効化
   response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(self)");
   return response;
 }
 
-export default auth((req) => {
+export default function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // API ルート以外はセキュリティヘッダーのみ追加してスキップ
@@ -61,8 +53,12 @@ export default auth((req) => {
     }
   }
 
-  // auth() が注入した認証情報を確認
-  if (!req.auth) {
+  // セッショントークンの存在を確認
+  const hasToken =
+    req.cookies.has("__Secure-authjs.session-token") ||
+    req.cookies.has("authjs.session-token");
+
+  if (!hasToken) {
     return NextResponse.json(
       { ok: false, message: "ログインが必要です" },
       { status: 401 }
@@ -70,7 +66,7 @@ export default auth((req) => {
   }
 
   return addSecurityHeaders(NextResponse.next());
-});
+}
 
 export const config = {
   // API ルートとページの両方に適用
