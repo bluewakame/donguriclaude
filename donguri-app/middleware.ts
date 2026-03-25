@@ -12,7 +12,7 @@ const PUBLIC_PATHS = [
 
 // 許可するオリジン
 const ALLOWED_ORIGINS = [
-  "https://donguri-orcin.vercel.app",
+  "https://donguriclaude.vercel.app",
   ...(process.env.NODE_ENV === "development" ? ["http://localhost:3000"] : []),
 ];
 
