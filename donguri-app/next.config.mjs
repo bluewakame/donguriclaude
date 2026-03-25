@@ -11,7 +11,7 @@ const nextConfig = {
   },
   experimental: {
     serverActions: {
-      allowedOrigins: ["localhost:3000", "donguri.vercel.app"],
+      allowedOrigins: ["localhost:3000", "donguri-orcin.vercel.app"],
     },
   },
   webpack: (config, { nextRuntime }) => {
