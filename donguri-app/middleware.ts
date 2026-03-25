@@ -2,7 +2,7 @@
 // NextAuth v5 の auth() を使用してJWTを検証する。
 // Edge Runtime で動作するため、bcryptjs/prisma を含まない auth.config を使用
 import NextAuth from "next-auth";
-import { authConfig } from "@/lib/auth.config";
+import { authConfig } from "./lib/auth.config";
 import { NextResponse } from "next/server";
 
 const { auth } = NextAuth(authConfig);
