@@ -65,6 +65,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
+  events: {
+    // Google OAuth等でユーザー作成後、displayNameをnameから設定
+    async createUser({ user }) {
+      if (user.id && user.name) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { displayName: user.name },
+        });
+      }
+    },
+  },
   callbacks: {
     // JWTにユーザーIDとロールを追加
     // このコールバックはAPI Route（Node.js Runtime）で実行される
