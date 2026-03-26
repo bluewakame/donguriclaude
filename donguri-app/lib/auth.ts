@@ -1,4 +1,6 @@
 // NextAuth.js v5 の設定（フルNode.js Runtime版）
+// ⚠️ next-auth v5 は beta 版を使用中。安定版リリース時にアップグレードすること。
+// セキュリティアドバイザリを定期的に確認: https://github.com/nextauthjs/next-auth/security
 import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import GoogleProvider from "next-auth/providers/google";

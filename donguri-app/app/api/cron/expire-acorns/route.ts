@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { expireAcorns } from "@/lib/token";
+import { logError } from "@/lib/log";
 
 /** タイミング攻撃を防止する定数時間文字列比較 */
 function timingSafeEqual(a: string, b: string): boolean {
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest) {
       message: `${totalExpired}個のどんぐりを消滅させました`,
     });
   } catch (error) {
-    console.error("どんぐり期限切れcronエラー:", error);
+    logError("どんぐり期限切れcronエラー", error);
     return NextResponse.json({ ok: false, message: "cron実行中にエラーが発生しました" }, { status: 500 });
   }
 }

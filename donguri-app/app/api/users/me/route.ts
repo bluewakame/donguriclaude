@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logError } from "@/lib/log";
 
 // GET: 自分のプロフィールを取得
 export async function GET() {
@@ -32,7 +33,7 @@ export async function GET() {
 
     return NextResponse.json({ ok: true, data: user });
   } catch (error) {
-    console.error("プロフィール取得エラー:", error);
+    logError("プロフィール取得エラー", error);
     return NextResponse.json({ ok: false, message: "サーバーエラーが発生しました" }, { status: 500 });
   }
 }
@@ -68,7 +69,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ ok: true, data: updatedUser, message: "プロフィールを更新しました" });
   } catch (error) {
-    console.error("プロフィール更新エラー:", error);
+    logError("プロフィール更新エラー", error);
     return NextResponse.json({ ok: false, message: "サーバーエラーが発生しました" }, { status: 500 });
   }
 }

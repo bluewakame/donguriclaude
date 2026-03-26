@@ -36,13 +36,20 @@ export default function middleware(req: NextRequest) {
   }
 
   // APIリクエストのOriginチェック（CSRF防止）
+  // 状態変更メソッドでは Origin ヘッダーが無い場合も拒否する
+  // （公開パスは上でスキップされる前にチェックされるが、
+  //   cron/auth は PUBLIC_PATHS で既にスキップ済みのため影響なし）
   if (req.method !== "GET" && req.method !== "HEAD" && req.method !== "OPTIONS") {
-    const origin = req.headers.get("origin");
-    if (origin && !ALLOWED_ORIGINS.includes(origin)) {
-      return NextResponse.json(
-        { ok: false, message: "不正なリクエスト元です" },
-        { status: 403 }
-      );
+    // 公開パスは Origin チェックをスキップ（cron 等のサーバー間通信のため）
+    const isPublicPath = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+    if (!isPublicPath) {
+      const origin = req.headers.get("origin");
+      if (!origin || !ALLOWED_ORIGINS.includes(origin)) {
+        return NextResponse.json(
+          { ok: false, message: "不正なリクエスト元です" },
+          { status: 403 }
+        );
+      }
     }
   }
 

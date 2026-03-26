@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { boilAcorns } from "@/lib/token";
+import { logError } from "@/lib/log";
 
 export async function POST() {
   try {
@@ -31,7 +32,7 @@ export async function POST() {
     if (e.code === "COOLDOWN") {
       return NextResponse.json({ ok: false, message: e.message }, { status: 429 });
     }
-    console.error("どんぐりをゆでるエラー:", error);
+    logError("どんぐりをゆでるエラー", error);
     return NextResponse.json({ ok: false, message: "サーバーエラーが発生しました" }, { status: 500 });
   }
 }

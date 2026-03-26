@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
+import { logError } from "@/lib/log";
 
 // 表示名の最大長
 const MAX_DISPLAY_NAME_LENGTH = 50;
@@ -31,6 +32,13 @@ export async function POST(request: NextRequest) {
     }
     if (!password || typeof password !== "string" || password.length < 8) {
       return NextResponse.json({ ok: false, message: "パスワードは8文字以上で入力してください" }, { status: 400 });
+    }
+    if (password.length > 128) {
+      return NextResponse.json({ ok: false, message: "パスワードは128文字以内で入力してください" }, { status: 400 });
+    }
+    // 最低限の複雑性: 英字と数字の両方を含むこと
+    if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+      return NextResponse.json({ ok: false, message: "パスワードは英字と数字の両方を含めてください" }, { status: 400 });
     }
     // #10: displayName のバリデーション強化
     if (!displayName || typeof displayName !== "string" || displayName.trim().length === 0) {
@@ -77,7 +85,7 @@ export async function POST(request: NextRequest) {
       throw error;
     }
   } catch (error) {
-    console.error("ユーザー登録エラー:", error);
+    logError("ユーザー登録エラー", error);
     return NextResponse.json({ ok: false, message: "サーバーエラーが発生しました" }, { status: 500 });
   }
 }

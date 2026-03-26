@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import { logError } from "@/lib/log";
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,6 +17,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const roleFilter = searchParams.get("role");
     const search = searchParams.get("search");
+    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "50", 10) || 50));
+    const skip = (page - 1) * limit;
 
     const conditions: Prisma.UserWhereInput[] = [];
     if (roleFilter) {
@@ -34,22 +38,32 @@ export async function GET(request: NextRequest) {
       ? { AND: conditions }
       : {};
 
-    const users = await prisma.user.findMany({
-      where,
-      select: {
-        id: true,
-        email: true,
-        displayName: true,
-        role: true,
-        acornBalance: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+          role: true,
+          acornBalance: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.user.count({ where }),
+    ]);
 
-    return NextResponse.json({ ok: true, data: users, currentUserId: session.user.id });
+    return NextResponse.json({
+      ok: true,
+      data: users,
+      currentUserId: session.user.id,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    });
   } catch (error) {
-    console.error("ユーザー一覧取得エラー:", error);
+    logError("ユーザー一覧取得エラー", error);
     return NextResponse.json({ ok: false, message: "サーバーエラーが発生しました" }, { status: 500 });
   }
 }

@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { exchangeLeaves } from "@/lib/token";
+import { logError } from "@/lib/log";
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof Error) {
       return NextResponse.json({ ok: false, message: error.message }, { status: 400 });
     }
-    console.error("葉っぱ交換エラー:", error);
+    logError("葉っぱ交換エラー", error);
     return NextResponse.json({ ok: false, message: "サーバーエラーが発生しました" }, { status: 500 });
   }
 }

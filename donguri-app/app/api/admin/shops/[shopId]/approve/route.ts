@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logError } from "@/lib/log";
 
 export async function POST(
   request: NextRequest,
@@ -38,6 +39,17 @@ export async function POST(
         reviewedAt: new Date(),
         reviewNote: reviewNote ?? null,
       },
+      select: {
+        id: true,
+        name: true,
+        address: true,
+        status: true,
+        reviewedAt: true,
+        reviewNote: true,
+        createdAt: true,
+        createdBy: true,
+        // qrCodeToken, qrExpiresAt は意図的に除外（秘密情報）
+      },
     });
 
     const message = action === "approve"
@@ -46,7 +58,7 @@ export async function POST(
 
     return NextResponse.json({ ok: true, data: updatedShop, message });
   } catch (error) {
-    console.error("加盟店審査エラー:", error);
+    logError("加盟店審査エラー", error);
     return NextResponse.json({ ok: false, message: "サーバーエラーが発生しました" }, { status: 500 });
   }
 }
