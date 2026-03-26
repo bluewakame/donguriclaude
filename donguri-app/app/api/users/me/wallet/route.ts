@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logError } from "@/lib/log";
 
 export async function GET() {
   try {
@@ -47,7 +48,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("ウォレット残高取得エラー:", error);
+    logError("ウォレット残高取得エラー", error);
     return NextResponse.json({ ok: false, message: "サーバーエラーが発生しました" }, { status: 500 });
   }
 }

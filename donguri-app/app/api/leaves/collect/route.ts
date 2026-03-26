@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logError } from "@/lib/log";
 
 // 1日あたりの葉っぱ収集上限
 const DAILY_LEAF_COLLECT_LIMIT = 50;
@@ -36,6 +37,20 @@ export async function POST(req: NextRequest) {
 
   if (!leafId || typeof leafId !== "string") {
     return NextResponse.json({ ok: false, error: "leafId が必要です" }, { status: 400 });
+  }
+
+  // leafId の形式バリデーション（UUID形式のみ許可し、任意文字列の偽造を防止）
+  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!UUID_REGEX.test(leafId)) {
+    return NextResponse.json({ ok: false, error: "leafId の形式が無効です" }, { status: 400 });
+  }
+
+  // 位置情報は必須（位置偽装を完全には防げないが、最低限の検証を行う）
+  if (typeof latitude !== "number" || typeof longitude !== "number") {
+    return NextResponse.json({ ok: false, error: "位置情報が必要です" }, { status: 400 });
+  }
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    return NextResponse.json({ ok: false, error: "位置情報の値が範囲外です" }, { status: 400 });
   }
 
   const userId = session.user.id;

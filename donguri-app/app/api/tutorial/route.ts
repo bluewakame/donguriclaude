@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logError } from "@/lib/log";
 
 export async function POST() {
   try {
@@ -18,7 +19,7 @@ export async function POST() {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("チュートリアル完了保存エラー:", error);
+    logError("チュートリアル完了保存エラー", error);
     return NextResponse.json({ ok: false, message: "サーバーエラーが発生しました" }, { status: 500 });
   }
 }

@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logError } from "@/lib/log";
 
 // ショップアイテム定義
 const SHOP_ITEMS = {
@@ -193,7 +194,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: false, error: "不明なアイテムです" }, { status: 400 });
   } catch (error) {
-    console.error("ショップ購入エラー:", error);
+    logError("ショップ購入エラー", error);
     return NextResponse.json({ ok: false, error: "サーバーエラーが発生しました" }, { status: 500 });
   }
 }

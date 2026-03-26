@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { verifyQrToken } from "@/lib/qrcode";
 import { awardAcorns, drawGoldenAcorn } from "@/lib/token";
 import { prisma } from "@/lib/prisma";
+import { logError } from "@/lib/log";
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         ok: false,
         message: verification.reason ?? "QRコードが無効です",
-      });
+      }, { status: 400 });
     }
 
     const { shop } = verification;
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           ok: false,
           message: `店舗の近くにいません（現在地と店舗の距離: ${Math.round(distance)}m）`,
-        });
+        }, { status: 400 });
       }
     }
 
@@ -99,7 +100,7 @@ export async function POST(request: NextRequest) {
       message: `${tokenLabel}を${earnedAmount}個獲得しました！${isGolden ? "✨ラッキー！" : ""}`,
     });
   } catch (error) {
-    console.error("QRスキャンエラー:", error);
+    logError("QRスキャンエラー", error);
     return NextResponse.json({ ok: false, message: "サーバーエラーが発生しました" }, { status: 500 });
   }
 }

@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { refreshQrToken } from "@/lib/qrcode";
+import { logError } from "@/lib/log";
 
 export async function POST(
   _request: NextRequest,
@@ -41,7 +42,7 @@ export async function POST(
       data: { qrCodeToken, qrExpiresAt },
     });
   } catch (error) {
-    console.error("QRコード更新エラー:", error);
+    logError("QRコード更新エラー", error);
     return NextResponse.json({ ok: false, message: "サーバーエラーが発生しました" }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { haversineDistance } from "@/lib/haversine";
+import { logError } from "@/lib/log";
 
 export async function GET(request: NextRequest) {
   try {
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ ok: true, data: shops }, { headers: cacheHeaders });
   } catch (error) {
-    console.error("加盟店一覧取得エラー:", error);
+    logError("加盟店一覧取得エラー", error);
     return NextResponse.json({ ok: false, message: "サーバーエラーが発生しました" }, { status: 500 });
   }
 }

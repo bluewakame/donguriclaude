@@ -19,6 +19,7 @@ async function main() {
       goldenProbability: 0.1,
       qrCodeToken: crypto.randomUUID(),
       qrExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24時間後
+      status: "approved" as const,
     },
     {
       name: "森のベーカリー 新宿店",
@@ -31,6 +32,7 @@ async function main() {
       goldenProbability: 0.05,
       qrCodeToken: crypto.randomUUID(),
       qrExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      status: "approved" as const,
     },
     {
       name: "クヌギ書店 池袋店",
@@ -43,6 +45,7 @@ async function main() {
       goldenProbability: 0.08,
       qrCodeToken: crypto.randomUUID(),
       qrExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      status: "approved" as const,
     },
   ];
 

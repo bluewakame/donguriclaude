@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateQrToken, getQrExpiry } from "@/lib/qrcode";
+import { logError } from "@/lib/log";
 
 export async function GET() {
   try {
@@ -24,7 +25,7 @@ export async function GET() {
 
     return NextResponse.json({ ok: true, data: shops });
   } catch (error) {
-    console.error("店舗一覧取得エラー:", error);
+    logError("店舗一覧取得エラー", error);
     return NextResponse.json({ ok: false, message: "サーバーエラーが発生しました" }, { status: 500 });
   }
 }
@@ -54,6 +55,9 @@ export async function POST(request: NextRequest) {
     if (typeof latitude !== "number" || typeof longitude !== "number") {
       return NextResponse.json({ ok: false, message: "位置情報が無効です" }, { status: 400 });
     }
+    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+      return NextResponse.json({ ok: false, message: "位置情報の値が範囲外です" }, { status: 400 });
+    }
 
     // QRコードトークンを生成
     const qrCodeToken = generateQrToken();
@@ -80,7 +84,7 @@ export async function POST(request: NextRequest) {
       message: "加盟店の登録申請を受け付けました",
     }, { status: 201 });
   } catch (error) {
-    console.error("加盟店登録エラー:", error);
+    logError("加盟店登録エラー", error);
     return NextResponse.json({ ok: false, message: "サーバーエラーが発生しました" }, { status: 500 });
   }
 }

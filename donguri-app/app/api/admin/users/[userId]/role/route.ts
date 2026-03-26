@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logError } from "@/lib/log";
 
 const VALID_ROLES = ["user", "merchant", "admin"] as const;
 type Role = typeof VALID_ROLES[number];
@@ -58,7 +59,7 @@ export async function PATCH(
       message: `ロールを ${newRole} に変更しました`,
     });
   } catch (error) {
-    console.error("ロール変更エラー:", error);
+    logError("ロール変更エラー", error);
     return NextResponse.json({ ok: false, message: "サーバーエラーが発生しました" }, { status: 500 });
   }
 }

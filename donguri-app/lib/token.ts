@@ -1,5 +1,6 @@
 // トークン管理ロジック（どんぐり獲得・ゆでる・交換・消滅）
 
+import crypto from "crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
@@ -24,7 +25,9 @@ const LEAVES_PER_ACORN = 10;
  * @returns 当選したかどうか
  */
 export function drawGoldenAcorn(probability: number): boolean {
-  return Math.random() < probability;
+  // 暗号学的安全な乱数を使用（経済的価値に関わる抽選のため予測困難性を担保）
+  const randomValue = crypto.randomInt(0, 1_000_000) / 1_000_000;
+  return randomValue < probability;
 }
 
 /**

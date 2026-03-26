@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { haversineDistance, isWithinRadius } from "@/lib/haversine";
+import { logError } from "@/lib/log";
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
       message: "来店が確認されました",
     });
   } catch (error) {
-    console.error("位置情報チェックインエラー:", error);
+    logError("位置情報チェックインエラー", error);
     return NextResponse.json({ ok: false, message: "サーバーエラーが発生しました" }, { status: 500 });
   }
 }

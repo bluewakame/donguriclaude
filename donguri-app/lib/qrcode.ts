@@ -2,6 +2,7 @@
 
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
+import { logError } from "@/lib/log";
 
 /**
  * 新しいQRコードトークンを生成する
@@ -63,7 +64,7 @@ export async function verifyQrToken(
       },
     };
   } catch (error) {
-    console.error("QRトークン検証エラー:", error);
+    logError("QRトークン検証エラー", error);
     return { valid: false, reason: "QRコードの検証中にエラーが発生しました" };
   }
 }

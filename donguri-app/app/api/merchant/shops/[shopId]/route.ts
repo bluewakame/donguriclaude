@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logError } from "@/lib/log";
 
 export async function GET(
   _request: NextRequest,
@@ -12,6 +13,11 @@ export async function GET(
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ ok: false, message: "ログインが必要です" }, { status: 401 });
+    }
+
+    const role = (session.user as Record<string, unknown>).role as string | undefined;
+    if (role !== "merchant" && role !== "admin") {
+      return NextResponse.json({ ok: false, message: "加盟店オーナー権限が必要です" }, { status: 403 });
     }
 
     const { shopId } = params;
@@ -40,7 +46,7 @@ export async function GET(
 
     return NextResponse.json({ ok: true, data: shop });
   } catch (error) {
-    console.error("店舗詳細取得エラー:", error);
+    logError("店舗詳細取得エラー", error);
     return NextResponse.json({ ok: false, message: "サーバーエラーが発生しました" }, { status: 500 });
   }
 }
@@ -53,6 +59,11 @@ export async function DELETE(
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ ok: false, message: "ログインが必要です" }, { status: 401 });
+    }
+
+    const role = (session.user as Record<string, unknown>).role as string | undefined;
+    if (role !== "merchant" && role !== "admin") {
+      return NextResponse.json({ ok: false, message: "加盟店オーナー権限が必要です" }, { status: 403 });
     }
 
     const { shopId } = params;
@@ -76,7 +87,7 @@ export async function DELETE(
 
     return NextResponse.json({ ok: true, message: "店舗を削除しました" });
   } catch (error) {
-    console.error("店舗削除エラー:", error);
+    logError("店舗削除エラー", error);
     return NextResponse.json({ ok: false, message: "サーバーエラーが発生しました" }, { status: 500 });
   }
 }
