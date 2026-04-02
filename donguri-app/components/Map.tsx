@@ -261,10 +261,10 @@ export default function Map() {
         userMarkerRef.current.setLatLng([userLocation.lat, userLocation.lng]);
       } else {
         const userIcon = L.divIcon({
-          html: '<div style="width:16px;height:16px;background:#4CAF82;border:3px solid white;border-radius:50%;box-shadow:0 0 0 3px rgba(76,175,130,0.3)"></div>',
+          html: '<div style="font-size:28px;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))">📍</div>',
           className: "",
-          iconSize: [16, 16],
-          iconAnchor: [8, 8],
+          iconSize: [28, 28],
+          iconAnchor: [14, 28],
         });
         userMarkerRef.current = L.marker(
           [userLocation.lat, userLocation.lng],
