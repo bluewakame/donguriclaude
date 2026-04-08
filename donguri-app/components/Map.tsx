@@ -260,11 +260,13 @@ export default function Map() {
       if (userMarkerRef.current) {
         userMarkerRef.current.setLatLng([userLocation.lat, userLocation.lng]);
       } else {
+        // 📍絵文字は font-size より広く描画されるため、コンテナを大きめに確保し
+        // flex で中央配置することでクリッピングや位置ずれを防ぐ
         const userIcon = L.divIcon({
-          html: '<div style="font-size:28px;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))">📍</div>',
+          html: '<div style="width:40px;height:40px;display:flex;align-items:flex-end;justify-content:center;font-size:36px;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.4))">📍</div>',
           className: "",
-          iconSize: [28, 28],
-          iconAnchor: [14, 28],
+          iconSize: [40, 40],
+          iconAnchor: [20, 38],
         });
         userMarkerRef.current = L.marker(
           [userLocation.lat, userLocation.lng],
