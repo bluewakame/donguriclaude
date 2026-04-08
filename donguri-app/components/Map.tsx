@@ -103,6 +103,8 @@ export default function Map() {
   const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
   const [leafMarkers, setLeafMarkers] = useState<LeafMarker[]>([]);
   const [collectMessage, setCollectMessage] = useState<string | null>(null);
+  // マップ初期化完了フラグ（マーカー追加 effect の再実行トリガー）
+  const [mapReady, setMapReady] = useState(false);
 
   const lastSpawnLocationRef = useRef<{ lat: number; lng: number } | null>(
     null
@@ -235,6 +237,8 @@ export default function Map() {
       }).addTo(map);
 
       mapInstanceRef.current = map;
+      // マーカー追加 effect を再トリガーするために state を更新
+      setMapReady(true);
     };
 
     initMap();
@@ -244,14 +248,17 @@ export default function Map() {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
       }
+      setMapReady(false);
     };
     // 初回の位置取得時のみマップを初期化
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userLocation]);
 
   // ユーザー位置マーカーを更新
+  // mapReady を依存に含めることで、マップ初期化完了後に確実にマーカーを追加する
+  // （mapInstanceRef は ref なので変更で再実行されないため）
   useEffect(() => {
-    if (!mapInstanceRef.current || !userLocation) return;
+    if (!mapReady || !mapInstanceRef.current || !userLocation) return;
 
     const updateMarker = async () => {
       const L = await getLeaflet();
@@ -282,11 +289,11 @@ export default function Map() {
     };
 
     updateMarker();
-  }, [userLocation]);
+  }, [userLocation, mapReady]);
 
   // 店舗マーカーを更新
   useEffect(() => {
-    if (!mapInstanceRef.current || shops.length === 0) return;
+    if (!mapReady || !mapInstanceRef.current || shops.length === 0) return;
 
     const updateShopMarkers = async () => {
       const L = await getLeaflet();
@@ -313,7 +320,7 @@ export default function Map() {
     };
 
     updateShopMarkers();
-  }, [shops]);
+  }, [shops, mapReady]);
 
   return (
     <div className="relative w-full h-full">
