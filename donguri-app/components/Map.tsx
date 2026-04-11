@@ -92,6 +92,17 @@ const SPAWN_DISTANCE_M = 30;
 const SPAWN_COOLDOWN_MS = 60000;
 const INITIAL_LEAF_COUNT = 5;
 
+// 📍絵文字は font-size より広く描画されるため、コンテナを大きめに確保し
+// flex で中央配置することでクリッピングや位置ずれを防ぐ
+function createUserIcon(L: typeof import("leaflet")) {
+  return L.divIcon({
+    html: '<div style="width:40px;height:40px;display:flex;align-items:flex-end;justify-content:center;font-size:36px;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.4))">📍</div>',
+    className: "",
+    iconSize: [40, 40],
+    iconAnchor: [20, 38],
+  });
+}
+
 export default function Map() {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<import("leaflet").Map | null>(null);
@@ -103,13 +114,14 @@ export default function Map() {
   const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
   const [leafMarkers, setLeafMarkers] = useState<LeafMarker[]>([]);
   const [collectMessage, setCollectMessage] = useState<string | null>(null);
+  const [mapReady, setMapReady] = useState(false);
 
   const lastSpawnLocationRef = useRef<{ lat: number; lng: number } | null>(
     null
   );
   const lastSpawnTimeRef = useRef<number>(0);
   const hasInitialSpawnRef = useRef(false);
-  const hasCenteredMapRef = useRef(false);
+  const hasInitializedMapRef = useRef(false);
   const userMarkerRef = useRef<import("leaflet").Marker | null>(null);
   const shopMarkersRef = useRef<import("leaflet").Marker[]>([]);
 
@@ -216,14 +228,22 @@ export default function Map() {
   }, [spawnLeaves]);
 
   // Leaflet マップを初期化（現在位置取得後に初期化する）
+  // 初期化は一生に一度だけ。userLocation の後続更新では早期 return し、
+  // マップ破棄・再生成ループや別 effect との競合を避ける。
   useEffect(() => {
-    if (!mapRef.current || mapInstanceRef.current || !userLocation) return;
+    if (!mapRef.current || hasInitializedMapRef.current || !userLocation)
+      return;
+    hasInitializedMapRef.current = true;
 
-    const initMap = async () => {
+    const initialLat = userLocation.lat;
+    const initialLng = userLocation.lng;
+
+    (async () => {
       const L = await getLeaflet();
+      if (!mapRef.current) return; // アンマウント済みなら中止
 
-      const map = L.map(mapRef.current!, {
-        center: [userLocation.lat, userLocation.lng],
+      const map = L.map(mapRef.current, {
+        center: [initialLat, initialLng],
         zoom: 15,
         zoomControl: true,
       });
@@ -235,65 +255,50 @@ export default function Map() {
       }).addTo(map);
 
       mapInstanceRef.current = map;
-    };
 
-    initMap();
+      // ユーザー位置マーカーを initMap 内でインライン生成することで、
+      // 別 effect との race を構造的に排除する。
+      // 初回マーカー生成時のみ「あなたの現在地」吹き出しを自動表示する。
+      userMarkerRef.current = L.marker(
+        [initialLat, initialLng],
+        { icon: createUserIcon(L), title: "現在地", zIndexOffset: 1000 }
+      )
+        .addTo(map)
+        .bindPopup("あなたの現在地")
+        .openPopup();
 
+      setMapReady(true);
+    })();
+    // cleanup はここに置かない（下の専用 effect で unmount 時のみ実施）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userLocation]);
+
+  // アンマウント時のみマップ・マーカー類をクリーンアップする。
+  // Strict Mode の double-invoke に備え、hasInitializedMapRef も必ずリセットする。
+  useEffect(() => {
     return () => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
       }
+      userMarkerRef.current = null;
+      shopMarkersRef.current = [];
+      hasInitializedMapRef.current = false;
     };
-    // 初回の位置取得時のみマップを初期化
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userLocation]);
+  }, []);
 
-  // ユーザー位置マーカーを更新
+  // ユーザー位置マーカーの位置を watchPosition の更新に追従させる
+  // （マーカー生成は initMap に移譲済みで、ここは setLatLng のみ）
   useEffect(() => {
-    if (!mapInstanceRef.current || !userLocation) return;
-
-    const updateMarker = async () => {
-      const L = await getLeaflet();
-      const map = mapInstanceRef.current!;
-
-      if (userMarkerRef.current) {
-        userMarkerRef.current.setLatLng([userLocation.lat, userLocation.lng]);
-      } else {
-        // 📍絵文字は font-size より広く描画されるため、コンテナを大きめに確保し
-        // flex で中央配置することでクリッピングや位置ずれを防ぐ
-        const userIcon = L.divIcon({
-          html: '<div style="width:40px;height:40px;display:flex;align-items:flex-end;justify-content:center;font-size:36px;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.4))">📍</div>',
-          className: "",
-          iconSize: [40, 40],
-          iconAnchor: [20, 38],
-        });
-        // 初回マーカー生成時のみ「あなたの現在地」吹き出しを自動表示する。
-        // setLatLng による位置更新では再オープンしないため、ユーザーが閉じた後に
-        // 煩わしく再表示されることはない。ポップアップはマーカーに紐付くので
-        // watchPosition による位置更新にも自動で追従する。
-        userMarkerRef.current = L.marker(
-          [userLocation.lat, userLocation.lng],
-          { icon: userIcon, title: "現在地", zIndexOffset: 1000 }
-        )
-          .addTo(map)
-          .bindPopup("あなたの現在地")
-          .openPopup();
-      }
-
-      // 初回のみ地図を現在地に移動（以降はユーザーが自由にパン操作できる）
-      if (!hasCenteredMapRef.current) {
-        hasCenteredMapRef.current = true;
-        map.setView([userLocation.lat, userLocation.lng], map.getZoom());
-      }
-    };
-
-    updateMarker();
+    if (!userMarkerRef.current || !userLocation) return;
+    userMarkerRef.current.setLatLng([userLocation.lat, userLocation.lng]);
   }, [userLocation]);
 
   // 店舗マーカーを更新
+  // fetchNearbyShops が initMap より先に resolve しても取りこぼさないよう
+  // mapReady を依存に含める。
   useEffect(() => {
-    if (!mapInstanceRef.current || shops.length === 0) return;
+    if (!mapReady || !mapInstanceRef.current || shops.length === 0) return;
 
     const updateShopMarkers = async () => {
       const L = await getLeaflet();
@@ -320,7 +325,7 @@ export default function Map() {
     };
 
     updateShopMarkers();
-  }, [shops]);
+  }, [shops, mapReady]);
 
   return (
     <div className="relative w-full h-full">
