@@ -107,6 +107,9 @@ export default function Map() {
   const [mapReady, setMapReady] = useState(false);
   // 初回位置取得済みフラグ（マップ初期化を一度だけトリガーするため）
   const [hasLocation, setHasLocation] = useState(false);
+  // 現在地ピンの画面ピクセル座標（lat/lng → containerPoint で計算）
+  // null のときは未配置（マップ未初期化 or 位置未取得）
+  const [pinScreenPos, setPinScreenPos] = useState<{ x: number; y: number } | null>(null);
 
   const lastSpawnLocationRef = useRef<{ lat: number; lng: number } | null>(
     null
@@ -114,7 +117,6 @@ export default function Map() {
   const lastSpawnTimeRef = useRef<number>(0);
   const hasInitialSpawnRef = useRef(false);
   const hasCenteredMapRef = useRef(false);
-  const userMarkerRef = useRef<import("leaflet").Marker | null>(null);
   const shopMarkersRef = useRef<import("leaflet").Marker[]>([]);
   // 最新の現在地（init effect が closure 経由ではなく ref 経由で読むため）
   const userLocationRef = useRef<{ lat: number; lng: number } | null>(null);
@@ -267,6 +269,19 @@ export default function Map() {
         return;
       }
 
+      // 現在地ピンの画面座標を再計算するハンドラ
+      // map.on('move zoom viewreset resize') で購読し、パン/ズーム/リサイズ
+      // のたびに lat/lng → ピクセル座標に変換して state を更新する
+      const updatePinPos = () => {
+        const loc = userLocationRef.current;
+        if (!loc) return;
+        const point = map.latLngToContainerPoint([loc.lat, loc.lng]);
+        setPinScreenPos({ x: point.x, y: point.y });
+      };
+      map.on("move zoom viewreset resize", updatePinPos);
+      // 初回計算（このタイミングで pinScreenPos がセットされピンが描画される）
+      updatePinPos();
+
       mapInstanceRef.current = map;
       // マーカー追加 effect を再トリガーするために state を更新
       setMapReady(true);
@@ -286,47 +301,26 @@ export default function Map() {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
       }
-      userMarkerRef.current = null;
       shopMarkersRef.current = [];
       setMapReady(false);
+      setPinScreenPos(null);
     };
   }, []);
 
-  // ユーザー位置マーカーを更新
-  // mapReady を依存に含めることで、マップ初期化完了後に確実にマーカーを追加する
-  // （mapInstanceRef は ref なので変更で再実行されないため）
+  // 現在地ピンの画面座標を更新（userLocation が変わるたび）
+  // 描画自体は React overlay（葉っぱと同じ要領）で行うため、Leaflet マーカーは使わない
   useEffect(() => {
     if (!mapReady || !mapInstanceRef.current || !userLocation) return;
 
-    const updateMarker = async () => {
-      const L = await getLeaflet();
-      const map = mapInstanceRef.current!;
+    const map = mapInstanceRef.current;
+    const point = map.latLngToContainerPoint([userLocation.lat, userLocation.lng]);
+    setPinScreenPos({ x: point.x, y: point.y });
 
-      if (userMarkerRef.current) {
-        userMarkerRef.current.setLatLng([userLocation.lat, userLocation.lng]);
-      } else {
-        // 📍絵文字は font-size より広く描画されるため、コンテナを大きめに確保し
-        // flex で中央配置することでクリッピングや位置ずれを防ぐ
-        const userIcon = L.divIcon({
-          html: '<div style="width:40px;height:40px;display:flex;align-items:flex-end;justify-content:center;font-size:36px;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.4))">📍</div>',
-          className: "",
-          iconSize: [40, 40],
-          iconAnchor: [20, 38],
-        });
-        userMarkerRef.current = L.marker(
-          [userLocation.lat, userLocation.lng],
-          { icon: userIcon, title: "現在地", zIndexOffset: 1000 }
-        ).addTo(map);
-      }
-
-      // 初回のみ地図を現在地に移動（以降はユーザーが自由にパン操作できる）
-      if (!hasCenteredMapRef.current) {
-        hasCenteredMapRef.current = true;
-        map.setView([userLocation.lat, userLocation.lng], map.getZoom());
-      }
-    };
-
-    updateMarker();
+    // 初回のみ地図を現在地に移動（以降はユーザーが自由にパン操作できる）
+    if (!hasCenteredMapRef.current) {
+      hasCenteredMapRef.current = true;
+      map.setView([userLocation.lat, userLocation.lng], map.getZoom());
+    }
   }, [userLocation, mapReady]);
 
   // 店舗マーカーを更新
@@ -374,6 +368,25 @@ export default function Map() {
       {/* 地図 */}
       {/* isolation: isolateでLeafletのz-indexをこのdiv内に封じ込める */}
       <div ref={mapRef} className="w-full h-full" style={{ isolation: "isolate" }} />
+
+      {/* 現在地ピン（葉っぱと同じ overlay 方式：lat/lng → 画面座標を */}
+      {/* map イベントで再計算し、React 要素として直接描画する） */}
+      {pinScreenPos && (
+        <div
+          className="absolute pointer-events-none z-[600] select-none"
+          style={{
+            left: pinScreenPos.x,
+            top: pinScreenPos.y,
+            transform: "translate(-50%, -100%)",
+            fontSize: "36px",
+            lineHeight: 1,
+            filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.4))",
+          }}
+          aria-label="現在地"
+        >
+          📍
+        </div>
+      )}
 
       {/* 葉っぱマーカー */}
       {leafMarkers.map((leaf) => (
