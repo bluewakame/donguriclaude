@@ -268,10 +268,17 @@ export default function Map() {
           iconSize: [40, 40],
           iconAnchor: [20, 38],
         });
+        // 初回マーカー生成時のみ「あなたの現在地」吹き出しを自動表示する。
+        // setLatLng による位置更新では再オープンしないため、ユーザーが閉じた後に
+        // 煩わしく再表示されることはない。ポップアップはマーカーに紐付くので
+        // watchPosition による位置更新にも自動で追従する。
         userMarkerRef.current = L.marker(
           [userLocation.lat, userLocation.lng],
           { icon: userIcon, title: "現在地", zIndexOffset: 1000 }
-        ).addTo(map);
+        )
+          .addTo(map)
+          .bindPopup("あなたの現在地")
+          .openPopup();
       }
 
       // 初回のみ地図を現在地に移動（以降はユーザーが自由にパン操作できる）
