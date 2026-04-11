@@ -105,6 +105,8 @@ export default function Map() {
   const [collectMessage, setCollectMessage] = useState<string | null>(null);
   // マップ初期化完了フラグ（マーカー追加 effect の再実行トリガー）
   const [mapReady, setMapReady] = useState(false);
+  // 初回位置取得済みフラグ（マップ初期化を一度だけトリガーするため）
+  const [hasLocation, setHasLocation] = useState(false);
 
   const lastSpawnLocationRef = useRef<{ lat: number; lng: number } | null>(
     null
@@ -114,6 +116,10 @@ export default function Map() {
   const hasCenteredMapRef = useRef(false);
   const userMarkerRef = useRef<import("leaflet").Marker | null>(null);
   const shopMarkersRef = useRef<import("leaflet").Marker[]>([]);
+  // 最新の現在地（init effect が closure 経由ではなく ref 経由で読むため）
+  const userLocationRef = useRef<{ lat: number; lng: number } | null>(null);
+  // フォールバック座標（東京）でマップを初期化したかどうか
+  const usedFallbackRef = useRef(false);
 
   // 近くの店舗を取得
   const fetchNearbyShops = async (lat: number, lng: number) => {
@@ -177,7 +183,15 @@ export default function Map() {
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
         const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        userLocationRef.current = loc;
         setUserLocation(loc);
+        setHasLocation(true);
+
+        // 直前にフォールバック座標で初期化していた場合、実位置で再センタリングする
+        if (usedFallbackRef.current) {
+          usedFallbackRef.current = false;
+          hasCenteredMapRef.current = false;
+        }
 
         if (!hasInitialSpawnRef.current) {
           hasInitialSpawnRef.current = true;
@@ -206,8 +220,12 @@ export default function Map() {
       },
       () => {
         // 位置情報取得に失敗した場合、東京をデフォルトに設定
-        setUserLocation({ lat: 35.6812, lng: 139.7671 });
-        fetchNearbyShops(35.6812, 139.7671);
+        const fallback = { lat: 35.6812, lng: 139.7671 };
+        userLocationRef.current = fallback;
+        setUserLocation(fallback);
+        setHasLocation(true);
+        usedFallbackRef.current = true;
+        fetchNearbyShops(fallback.lat, fallback.lng);
       },
       // enableHighAccuracy: false で省電力かつ高速な位置取得
     // maximumAge: 30000 でキャッシュ済み位置情報を最大30秒間再利用
@@ -217,15 +235,22 @@ export default function Map() {
     return () => navigator.geolocation.clearWatch(watchId);
   }, [spawnLeaves]);
 
-  // Leaflet マップを初期化（現在位置取得後に初期化する）
+  // Leaflet マップを初期化（初回位置取得時のみ実行する）
+  // hasLocation を依存にすることで、watchPosition の連続発火による
+  // マップ再生成レース（マーカー孤児化バグ）を防ぐ
   useEffect(() => {
-    if (!mapRef.current || mapInstanceRef.current || !userLocation) return;
+    if (!hasLocation) return;
+    if (!mapRef.current || mapInstanceRef.current) return;
 
-    const initMap = async () => {
+    // canceled フラグで late resolution（StrictMode 二重マウント等）を吸収する
+    let canceled = false;
+    (async () => {
       const L = await getLeaflet();
+      if (canceled || mapInstanceRef.current || !mapRef.current) return;
 
-      const map = L.map(mapRef.current!, {
-        center: [userLocation.lat, userLocation.lng],
+      const initial = userLocationRef.current!;
+      const map = L.map(mapRef.current, {
+        center: [initial.lat, initial.lng],
         zoom: 15,
         zoomControl: true,
       });
@@ -236,23 +261,36 @@ export default function Map() {
         maxZoom: 19,
       }).addTo(map);
 
+      // tileLayer 追加後にキャンセルされていたらリソースを解放
+      if (canceled) {
+        map.remove();
+        return;
+      }
+
       mapInstanceRef.current = map;
       // マーカー追加 effect を再トリガーするために state を更新
       setMapReady(true);
+    })();
+
+    // per-run cleanup は canceled フラグを立てるだけ（mapInstanceRef は触らない）
+    return () => {
+      canceled = true;
     };
+  }, [hasLocation]);
 
-    initMap();
-
+  // アンマウント時のみ map インスタンスを破棄しマーカー参照をクリアする
+  // （userLocation 更新では破棄しないことで「マーカー孤児化」バグを避ける）
+  useEffect(() => {
     return () => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
       }
+      userMarkerRef.current = null;
+      shopMarkersRef.current = [];
       setMapReady(false);
     };
-    // 初回の位置取得時のみマップを初期化
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userLocation]);
+  }, []);
 
   // ユーザー位置マーカーを更新
   // mapReady を依存に含めることで、マップ初期化完了後に確実にマーカーを追加する
