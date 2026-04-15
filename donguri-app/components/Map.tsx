@@ -92,14 +92,14 @@ const SPAWN_DISTANCE_M = 30;
 const SPAWN_COOLDOWN_MS = 60000;
 const INITIAL_LEAF_COUNT = 5;
 
-// 📍絵文字は font-size より広く描画されるため、コンテナを大きめに確保し
-// flex で中央配置することでクリッピングや位置ずれを防ぐ
+// iOS Chrome/Safari では filter: drop-shadow を emoji に適用すると描画されないため
+// 店舗マーカーと同じシンプルなスタイルを使用する
 function createUserIcon(L: typeof import("leaflet")) {
   return L.divIcon({
-    html: '<div style="width:40px;height:40px;display:flex;align-items:flex-end;justify-content:center;font-size:36px;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.4))">📍</div>',
+    html: '<div style="font-size:32px;line-height:1;">📍</div>',
     className: "",
-    iconSize: [40, 40],
-    iconAnchor: [20, 38],
+    iconSize: [32, 32],
+    iconAnchor: [16, 30],
   });
 }
 
