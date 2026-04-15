@@ -182,7 +182,12 @@ export default function Map() {
 
   // ユーザーの現在地を取得・追跡
   useEffect(() => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      // Geolocation 非対応端末はデフォルト位置（東京）でマップを表示
+      setUserLocation({ lat: 35.6812, lng: 139.7671 });
+      fetchNearbyShops(35.6812, 139.7671);
+      return;
+    }
 
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
@@ -268,6 +273,10 @@ export default function Map() {
         .openPopup();
 
       setMapReady(true);
+
+      // モバイルではCSSの高さ確定がLeaflet初期化より遅れるケースがあるため
+      // レイアウト計算完了後にサイズを再計算して地図・ピンを正しく描画する
+      setTimeout(() => { mapInstanceRef.current?.invalidateSize(); }, 200);
     })();
     // cleanup はここに置かない（下の専用 effect で unmount 時のみ実施）
     // eslint-disable-next-line react-hooks/exhaustive-deps
