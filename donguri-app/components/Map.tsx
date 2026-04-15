@@ -92,17 +92,6 @@ const SPAWN_DISTANCE_M = 30;
 const SPAWN_COOLDOWN_MS = 60000;
 const INITIAL_LEAF_COUNT = 5;
 
-// iOS Chrome/Safari では filter: drop-shadow を emoji に適用すると描画されないため
-// 店舗マーカーと同じシンプルなスタイルを使用する
-function createUserIcon(L: typeof import("leaflet")) {
-  return L.divIcon({
-    html: '<div style="font-size:32px;line-height:1;">📍</div>',
-    className: "",
-    iconSize: [32, 32],
-    iconAnchor: [16, 30],
-  });
-}
-
 export default function Map() {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<import("leaflet").Map | null>(null);
@@ -122,7 +111,10 @@ export default function Map() {
   const lastSpawnTimeRef = useRef<number>(0);
   const hasInitialSpawnRef = useRef(false);
   const hasInitializedMapRef = useRef(false);
-  const userMarkerRef = useRef<import("leaflet").Marker | null>(null);
+  // 現在地ピンはLeafletマーカーではなくReact要素で描画する。
+  // iOS Chrome では isolation:isolate + GPU合成によりLeafletのtile層が
+  // marker層（z-600）を上書きする既知バグがあるため、Reactオーバーレイで回避する。
+  const userPinRef = useRef<HTMLDivElement>(null);
   const shopMarkersRef = useRef<import("leaflet").Marker[]>([]);
 
   // 近くの店舗を取得
@@ -260,22 +252,10 @@ export default function Map() {
       }).addTo(map);
 
       mapInstanceRef.current = map;
-
-      // ユーザー位置マーカーを initMap 内でインライン生成することで、
-      // 別 effect との race を構造的に排除する。
-      // 初回マーカー生成時のみ「あなたの現在地」吹き出しを自動表示する。
-      userMarkerRef.current = L.marker(
-        [initialLat, initialLng],
-        { icon: createUserIcon(L), title: "現在地", zIndexOffset: 1000 }
-      )
-        .addTo(map)
-        .bindPopup("あなたの現在地")
-        .openPopup();
-
       setMapReady(true);
 
       // モバイルではCSSの高さ確定がLeaflet初期化より遅れるケースがあるため
-      // レイアウト計算完了後にサイズを再計算して地図・ピンを正しく描画する
+      // レイアウト計算完了後にサイズを再計算して地図を正しく描画する
       setTimeout(() => { mapInstanceRef.current?.invalidateSize(); }, 200);
     })();
     // cleanup はここに置かない（下の専用 effect で unmount 時のみ実施）
@@ -290,18 +270,33 @@ export default function Map() {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
       }
-      userMarkerRef.current = null;
       shopMarkersRef.current = [];
       hasInitializedMapRef.current = false;
     };
   }, []);
 
-  // ユーザー位置マーカーの位置を watchPosition の更新に追従させる
-  // （マーカー生成は initMap に移譲済みで、ここは setLatLng のみ）
-  useEffect(() => {
-    if (!userMarkerRef.current || !userLocation) return;
-    userMarkerRef.current.setLatLng([userLocation.lat, userLocation.lng]);
+  // 現在地ピンの画面座標をDOMに直接書き込む（Reactの再レンダリングを回避しスムーズに動かす）
+  // userLocation が変わるたびに新しい関数参照を生成し、下の effect でリスナーを付け替える。
+  const updateUserPinPosition = useCallback(() => {
+    if (!mapInstanceRef.current || !userLocation || !userPinRef.current) return;
+    const point = mapInstanceRef.current.latLngToContainerPoint([
+      userLocation.lat,
+      userLocation.lng,
+    ]);
+    const el = userPinRef.current;
+    el.style.left = `${point.x}px`;
+    el.style.top = `${point.y}px`;
+    el.style.display = "block";
   }, [userLocation]);
+
+  // マップのパン・ズーム時に現在地ピン位置を更新する
+  useEffect(() => {
+    if (!mapReady || !mapInstanceRef.current) return;
+    const map = mapInstanceRef.current;
+    map.on("move zoom", updateUserPinPosition);
+    updateUserPinPosition();
+    return () => { map.off("move zoom", updateUserPinPosition); };
+  }, [mapReady, updateUserPinPosition]);
 
   // 店舗マーカーを更新
   // fetchNearbyShops が initMap より先に resolve しても取りこぼさないよう
@@ -350,6 +345,15 @@ export default function Map() {
       {/* 地図 */}
       {/* isolation: isolateでLeafletのz-indexをこのdiv内に封じ込める */}
       <div ref={mapRef} className="w-full h-full" style={{ isolation: "isolate" }} />
+
+      {/* 現在地ピン（ReactオーバーレイとしてLeafletのz-index問題を回避） */}
+      <div
+        ref={userPinRef}
+        className="absolute z-[600] pointer-events-none select-none text-3xl leading-none"
+        style={{ display: "none", transform: "translate(-50%, -100%)" }}
+      >
+        📍
+      </div>
 
       {/* 葉っぱマーカー */}
       {leafMarkers.map((leaf) => (
